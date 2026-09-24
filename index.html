@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lovers' Board Game</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#24162b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lovers' Game">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Figtree:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#24162b; --surface:#33203b; --surface2:#432a4c; --ink:#f6e9ee; --dim:#c5aebb;
+  --line:rgba(246,233,238,.18); --rose:#e59aa6; --gold:#e8b86d; --onaccent:#2a1430;
+  --wood:#5b3a34; --wood2:#4d302b; --felt:#3a2242;
+  --p0:#e8b86d; --p1:#e59aa6;
+  --serif:'Fraunces',Georgia,'Times New Roman',serif;
+  --sans:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f7edf0; --surface:#fff8f9; --surface2:#f1dfe5; --ink:#2b1830; --dim:#6d5573;
+    --line:rgba(43,24,48,.18); --rose:#b0435b; --gold:#9a6a17; --onaccent:#fff8f9;
+    --wood:#b98f74; --wood2:#a98066; --felt:#ead3dc; --p0:#9a6a17; --p1:#b0435b;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f7edf0; --surface:#fff8f9; --surface2:#f1dfe5; --ink:#2b1830; --dim:#6d5573;
+  --line:rgba(43,24,48,.18); --rose:#b0435b; --gold:#9a6a17; --onaccent:#fff8f9;
+  --wood:#b98f74; --wood2:#a98066; --felt:#ead3dc; --p0:#9a6a17; --p1:#b0435b;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+body{min-height:100dvh}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid var(--gold);outline-offset:2px}
+h1,h2,h3{margin:0;font-family:var(--serif);font-weight:600}
+.wrap{max-width:900px;margin:0 auto;padding:14px 16px 40px}
+.top{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap}
+.top .who{font-family:var(--serif);font-size:1.15rem}
+.top .who b{font-weight:600}
+.top .btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:9px 16px;min-height:44px}
+.btn.primary{background:var(--rose);color:var(--onaccent);border-color:transparent;font-weight:600}
+.btn.small{min-height:36px;padding:6px 12px;font-size:.9rem}
+.btn.danger{border-color:var(--rose);color:var(--rose)}
+.p0{color:var(--p0)} .p1{color:var(--p1)}
+b.p0,b.p1{font-weight:600}
+.clock{color:var(--dim);font-size:.9rem}
+
+/* board */
+.board{display:grid;grid-template:repeat(7,1fr)/repeat(7,1fr);gap:4px;aspect-ratio:1;
+  width:min(100%,calc(100dvh - 170px));max-width:720px;min-width:300px;margin:0 auto;padding:8px;border-radius:20px;
+  background:repeating-linear-gradient(92deg,var(--wood) 0 22px,var(--wood2) 22px 24px);border:1px solid var(--line)}
+.cell{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:clamp(9px,1.9vw,13px);font-weight:600;color:#fff;text-align:center;position:relative;min-width:0}
+.cell.now{box-shadow:0 0 0 2px var(--gold) inset}
+.t-home{background:#a0405a}.t-massage{background:#83557c}.t-dance{background:#b4566d}.t-gym{background:#b9764a}
+.t-clinic{background:#4f7f7b}.t-spa{background:#46739a}.t-lounge{background:#6f5296}.t-chance{background:#c9a94f;color:#2a1430}
+.toks{display:flex;gap:3px;min-height:12px}
+.tok{width:clamp(9px,2vw,14px);height:clamp(9px,2vw,14px);border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.tok.a{background:#e8b86d}.tok.b{background:#f2a0b0}
+.center{grid-area:2/2/7/7;background:var(--felt);border-radius:12px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;padding:12px;text-align:center}
+.center .turn{font-family:var(--serif);font-size:clamp(1.1rem,3.4vw,1.7rem)}
+.center .hint{color:var(--dim);font-size:.9rem}
+.dice{display:flex;gap:10px}
+.die{width:54px;height:54px;border-radius:12px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;
+  font-family:var(--serif);font-size:1.7rem}
+.roll{font-size:1.1rem;padding:14px 32px;min-height:52px}
+
+/* overlays */
+.scrim{position:fixed;inset:0;background:rgba(12,4,16,.62);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.scrim.sheetwrap{align-items:flex-end;padding:0}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:22px;width:min(560px,100%);padding:22px 22px 18px;
+  max-height:calc(100dvh - 32px);overflow:auto}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:22px 22px 0 0;width:min(680px,100%);padding:18px 20px calc(24px + env(safe-area-inset-bottom,0px));
+  max-height:82dvh;overflow:auto}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.venue{color:var(--dim);font-size:.95rem;display:flex;justify-content:space-between;align-items:center}
+.dots{display:flex;gap:4px}.dots i{width:8px;height:8px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--rose)}
+.cardtext{font-family:var(--serif);font-size:clamp(1.35rem,4vw,1.85rem);line-height:1.3;margin:18px 0 22px}
+.cardfoot{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.cardfoot .btns{display:flex;gap:8px;flex-wrap:wrap}
+.never{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--dim);margin-left:auto;padding:6px 4px}
+.never input{width:20px;height:20px;accent-color:var(--rose)}
+.choices{display:grid;gap:10px;margin-top:16px}
+.choices .btn{text-align:left;padding:14px 18px}
+.choices small{display:block;color:var(--dim)}
+
+/* controls */
+.group{margin:0 0 16px}
+.group h3{font-size:1.05rem;margin-bottom:6px}
+.label{color:var(--dim);font-size:.9rem;margin:6px 0 4px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex-wrap:wrap}
+.seg button{background:none;border:0;padding:9px 16px;min-height:44px;min-width:44px}
+.seg button.on{background:var(--rose);color:var(--onaccent);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:none;border:1px solid var(--line);border-radius:999px;padding:8px 14px;min-height:40px}
+.chip.on{background:var(--surface2);border-color:var(--gold);color:var(--ink)}
+.chip.on::before{content:"✓ ";color:var(--gold)}
+input[type=text],input[type=number],select,textarea{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);
+  border-radius:10px;padding:10px 12px;font:inherit;min-height:44px}
+textarea{min-height:88px;resize:vertical}
+.field{margin-bottom:12px}.field label{display:block;color:var(--dim);font-size:.9rem;margin-bottom:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:18px}
+.panel h2{font-size:1.3rem;margin-bottom:10px}
+.msg{color:var(--gold);font-size:.92rem;margin:8px 0;white-space:pre-wrap}
+.row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.row .txt{flex:1;min-width:0}
+.row .meta{color:var(--dim);font-size:.82rem}
+.row.off .txt{opacity:.5}
+.badge{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 8px;font-size:.78rem;color:var(--dim);margin-right:6px}
+.badge.hid{border-color:var(--rose);color:var(--rose)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.hero{font-family:var(--serif);font-size:clamp(1.8rem,6vw,2.6rem);line-height:1.15;margin:8px 0 6px}
+.sub{color:var(--dim);margin:0 0 18px}
+@media (max-width:560px){.two{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: no-preference){.modal,.sheet{animation:rise .18s ease-out}@keyframes rise{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="layer"></div>
+
+<script>
+/* ============ data ============ */
+const DEFAULT_CLOTHING=['top','bottoms','socks','shoes','jewelry','robe'];
+const DEFAULT_TOYS=['massage_oil','ice','feather','blindfold','candle','music'];
+const PASSION=['Tender','Warm','Heated','Intense','Fiery'];
+const PACE={slow:0.6,steady:1,quick:1.8};
+const VENUES={
+  home:{name:'Home',short:'Home'},massage:{name:'Massage Studio',short:'Massage'},dance:{name:'Dance Hall',short:'Dance'},
+  gym:{name:'Gym',short:'Gym'},clinic:{name:'Wellness Clinic',short:'Clinic'},spa:{name:'Spa Bath',short:'Spa'},
+  lounge:{name:'Candlelit Lounge',short:'Lounge'},chance:{name:'Chance',short:'Chance'}
+};
+const BOARD_TYPES=['home','massage','dance','chance','gym','clinic','lounge','spa','massage','dance','chance','gym','clinic','lounge','spa','massage','dance','chance','gym','clinic','lounge','spa','chance','dance'];
+const RING=[];
+for(let c=0;c<7;c++)RING.push([0,c]);
+for(let r=1;r<7;r++)RING.push([r,6]);
+for(let c=5;c>=0;c--)RING.push([6,c]);
+for(let r=5;r>=1;r--)RING.push([r,0]);
+
+/* id, venue, intensity, min_minutes, performer_wearing, performer_not_wearing, recipient_wearing, recipient_not_wearing, toys, text */
+const SEED=[
+['h01','home',1,0,'','','','','',"Start with a minute of holding hands. {performer} shares one thing they're hoping for tonight."],
+['h02','home',1,0,'','','','','',"{performer} and {recipient} each name a favorite moment from this week."],
+['m01','massage',1,0,'','','','','',"{performer} gives {recipient} a 3-minute shoulder massage."],
+['m02','massage',1,0,'','','','','',"{performer} massages {recipient}'s hands, one minute each."],
+['m03','massage',1,0,'','','','shoes','',"{performer} gives {recipient} a slow foot massage."],
+['m04','massage',2,8,'','','','top','massage_oil',"{performer} warms massage oil and rubs {recipient}'s back for five unhurried minutes."],
+['m05','massage',2,5,'','','','','',"{performer} massages {recipient}'s neck and scalp. {recipient} says when the pressure feels right."],
+['m06','massage',3,15,'','','','top','',"{performer} gives {recipient} a full back massage with long, slow strokes for five minutes."],
+['m07','massage',2,6,'','','','','candle',"{performer} drips warm massage-candle oil onto {recipient}'s shoulders and works it in."],
+['d01','dance',1,0,'','','','','',"{performer} leads {recipient} in a slow dance to the current song."],
+['d02','dance',1,0,'','','','','',"{recipient} picks the next song. {performer} asks for a dance."],
+['d03','dance',2,5,'','','','','',"Dance close for one full song. No talking, just eye contact."],
+['d04','dance',2,8,'','','','','',"{performer} whispers what they love most about {recipient} while you sway together."],
+['d05','dance',3,15,'','','','','',"{performer} dances just for {recipient} for one song while {recipient} watches and doesn't touch."],
+['g01','gym',1,0,'','','','','',"{performer} guides {recipient} through a slow arm and shoulder stretch."],
+['g02','gym',1,0,'','','','','',"Sit back to back and breathe together for one minute."],
+['g03','gym',2,5,'','','','','',"{performer} helps {recipient} stretch their legs, slowly and gently."],
+['g04','gym',2,8,'','','','','',"Play-wrestle for two minutes. The winner picks who gives on the next card."],
+['g05','gym',2,10,'','','','','',"{performer} picks up {recipient} for a hug, if it's comfortable, and holds them for ten seconds."],
+['c01','clinic',1,0,'','','','','',"{performer} takes {recipient}'s pulse at the wrist, then reports the result in a very serious voice."],
+['c02','clinic',1,0,'','','','','',"{performer} writes {recipient} a prescription: ten kisses, filled immediately."],
+['c03','clinic',2,6,'','','','','',"{performer} 'examines' {recipient} with fingertips only, very slowly, from head to toe."],
+['c04','clinic',2,10,'','','','','feather',"{performer} traces a feather along {recipient}'s arms and neck to test their reflexes."],
+['c05','clinic',3,15,'','','','','blindfold',"{recipient} wears a blindfold. {performer} tests their reflexes with different touches and {recipient} guesses each one."],
+['s01','spa',1,0,'','','','','',"{performer} washes and dries {recipient}'s hands gently."],
+['s02','spa',1,0,'','','','','',"Take turns brushing each other's hair for one minute."],
+['s03','spa',2,5,'','','','','',"{performer} kisses {recipient}'s neck and shoulders for two minutes."],
+['s04','spa',2,8,'','','','','ice',"{performer} slowly traces an ice cube along {recipient}'s arm."],
+['s05','spa',3,15,'','','','','',"Share a long, slow kiss and don't stop until the song changes."],
+['l01','lounge',1,0,'','','','','',"Each of you shares your favorite memory of the two of you."],
+['l02','lounge',1,0,'','','','','',"Trade three compliments each. No repeats."],
+['l03','lounge',1,0,'','','','','',"{performer} feeds {recipient} something sweet, if there's anything nearby."],
+['l04','lounge',2,6,'','','','','',"{performer} kisses {recipient} anywhere {recipient} chooses, for one minute."],
+['l05','lounge',2,8,'','','socks','','',"{performer} slowly removes {recipient}'s socks and kisses each foot."],
+['l06','lounge',3,15,'','','top','','',"{performer} slowly takes off {recipient}'s top."],
+['l07','lounge',2,8,'','','','','candle',"Light the candle and share a slow kiss by its glow."],
+['x01','chance',1,0,'','','','','',"Pick a song for the two of you and stay close until it ends."],
+['x02','chance',1,0,'','','','','',"{performer} whispers a secret compliment in {recipient}'s ear."],
+['x03','chance',2,5,'','','','','',"{recipient} asks for a kiss anywhere for one minute. {performer} delivers."],
+['x04','chance',2,10,'','','','','',"Hold each other for two minutes with no talking."]
+];
+const FALLBACK={id:'_fallback',venue:'any',intensity:1,min_minutes:0,pw:[],pnw:[],rw:[],rnw:[],toys:[],enabled:true,
+  text:"Take a moment. {performer} tells {recipient} one thing they appreciated today."};
+
+const COLS=['id','venue','text','intensity','min_minutes','performer_wearing','performer_not_wearing','recipient_wearing','recipient_not_wearing','toys','enabled'];
+
+/* ============ storage ============ */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+const tags=v=>String(v||'').split(/[|,;]/).map(t=>t.trim().toLowerCase().replace(/\s+/g,'_')).filter(Boolean);
+const label=t=>t.replace(/_/g,' ');
+let uid=0;const newId=()=>'u'+Date.now().toString(36)+(uid++).toString(36);
+
+function mk(o){
+  const en=String(o.enabled===undefined?'1':o.enabled).trim().toLowerCase();
+  return {id:String(o.id||newId()).trim(),venue:String(o.venue||'any').trim().toLowerCase(),text:String(o.text||'').trim(),
+    intensity:Math.min(5,Math.max(1,parseInt(o.intensity)||1)),min_minutes:Math.max(0,parseInt(o.min_minutes)||0),
+    pw:tags(o.pw),pnw:tags(o.pnw),rw:tags(o.rw),rnw:tags(o.rnw),toys:tags(o.toys),
+    enabled:!['0','false','no','off'].includes(en)};
+}
+function seedActions(){return SEED.map(r=>mk({id:r[0],venue:r[1],intensity:r[2],min_minutes:r[3],pw:r[4],pnw:r[5],rw:r[6],rnw:r[7],toys:r[8],text:r[9]}))}
+
+let ACTIONS=load('lb.actions.v1',null)||seedActions();
+let HIDDEN=new Set(load('lb.hidden.v1',[]));
+const saveActions=()=>save('lb.actions.v1',ACTIONS);
+const saveHidden=()=>save('lb.hidden.v1',[...HIDDEN]);
+
+function newState(){return {names:['Player 1','Player 2'],wearing:[['top','bottoms','socks','shoes'],['top','bottoms','socks','shoes']],
+  passion:[2,2],toys:[],pace:'steady',pos:0,turn:0,elapsed:0,started:false,recent:[]}}
+let S=Object.assign(newState(),load('lb.state.v1',{}));
+const saveState=()=>save('lb.state.v1',S);
+const ui={screen:S.started?'game':'setup',phase:'idle',dice:null,card:null,panel:false,lib:{venue:'',q:'',show:'all'},libMsg:''};
+
+const allClothing=()=>[...new Set([...DEFAULT_CLOTHING,...ACTIONS.flatMap(a=>[...a.pw,...a.pnw,...a.rw,...a.rnw])])];
+const allToys=()=>[...new Set([...DEFAULT_TOYS,...ACTIONS.flatMap(a=>a.toys)])];
+
+/* ============ engine ============ */
+const effMinutes=()=>(S.elapsed/60)*PACE[S.pace];
+const cap=()=>Math.min(Math.min(...S.passion),1+Math.floor(effMinutes()/8));
+function pool(space,perf,relax){
+  const rec=1-perf,eff=effMinutes(),c=cap(),toys=new Set(S.toys),wp=new Set(S.wearing[perf]),wr=new Set(S.wearing[rec]);
+  return ACTIONS.filter(a=>{
+    if(!a.enabled||HIDDEN.has(a.id))return false;
+    if(!relax){
+      if(space==='chance'){if(a.venue==='home')return false}
+      else if(a.venue!==space&&a.venue!=='any')return false;
+    }
+    if(a.intensity>c||a.min_minutes>eff)return false;
+    if(!a.pw.every(t=>wp.has(t))||a.pnw.some(t=>wp.has(t)))return false;
+    if(!a.rw.every(t=>wr.has(t))||a.rnw.some(t=>wr.has(t)))return false;
+    return a.toys.every(t=>toys.has(t));
+  });
+}
+function drawCard(space,perf){
+  let p=pool(space,perf,false);
+  if(!p.length&&space==='home')p=pool('lounge',perf,false);
+  if(!p.length)p=pool(space,perf,true);
+  const fresh=p.filter(a=>!S.recent.includes(a.id));
+  if(fresh.length)p=fresh;
+  let pick=FALLBACK;
+  if(p.length){
+    const c=cap(),w=p.map(a=>1+(a.intensity===c?2:a.intensity===c-1?1:0));
+    let r=Math.random()*w.reduce((x,y)=>x+y,0);
+    for(let i=0;i<p.length;i++){r-=w[i];if(r<=0){pick=p[i];break}}
+    if(pick===FALLBACK)pick=p[p.length-1];
+  }
+  if(pick.id!=='_fallback'){S.recent.push(pick.id);S.recent=S.recent.slice(-10);saveState()}
+  return {a:pick,space,perf};
+}
+const fmt=(text,perf)=>esc(text)
+  .replace(/\{performer\}/g,`<b class="p${perf}">${esc(S.names[perf])}</b>`)
+  .replace(/\{recipient\}/g,`<b class="p${1-perf}">${esc(S.names[1-perf])}</b>`);
+
+/* ============ csv ============ */
+function parseCSV(t){
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<t.length;i++){
+    const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';rows.push(row);row=[]}
+    else f+=c;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  return rows.filter(r=>r.some(x=>x.trim()!==''));
+}
+const q=v=>{v=String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+function toCSV(list){
+  const lines=[COLS.join(',')];
+  list.forEach(a=>lines.push([a.id,a.venue,a.text,a.intensity,a.min_minutes,a.pw.join('|'),a.pnw.join('|'),a.rw.join('|'),a.rnw.join('|'),a.toys.join('|'),a.enabled?1:0].map(q).join(',')));
+  return lines.join('\n');
+}
+function importCSV(text,replace){
+  const rows=parseCSV(text);
+  if(rows.length<2)return 'Nothing to import. The first row must be the column headers, followed by at least one card.';
+  const h=rows[0].map(x=>x.trim().toLowerCase()),ix=n=>h.indexOf(n);
+  if(ix('text')<0)return 'Missing a "text" column. Expected columns: '+COLS.join(', ');
+  const warn=[];let add=0,upd=0;const incoming=[];
+  rows.slice(1).forEach((r,n)=>{
+    const g=name=>ix(name)>=0?(r[ix(name)]||''):'';
+    if(!g('text').trim()){warn.push('Row '+(n+2)+': no text, skipped.');return}
+    const a=mk({id:g('id'),venue:g('venue')||'any',text:g('text'),intensity:g('intensity'),min_minutes:g('min_minutes'),
+      pw:g('performer_wearing'),pnw:g('performer_not_wearing'),rw:g('recipient_wearing'),rnw:g('recipient_not_wearing'),toys:g('toys'),enabled:ix('enabled')>=0?g('enabled')||'1':'1'});
+    if(a.venue!=='any'&&!VENUES[a.venue])warn.push('Row '+(n+2)+': unknown venue "'+a.venue+'". Use one of: '+Object.keys(VENUES).join(', ')+', any.');
+    incoming.push(a);
+  });
+  if(replace){ACTIONS=incoming;add=incoming.length}
+  else incoming.forEach(a=>{const i=ACTIONS.findIndex(x=>x.id===a.id);if(i>=0){ACTIONS[i]=a;upd++}else{ACTIONS.push(a);add++}});
+  saveActions();
+  return (replace?'Replaced library with ':'Imported ')+add+' new'+(upd?', '+upd+' updated':'')+' card'+(add+upd===1?'':'s')+'.'+(warn.length?'\n'+warn.slice(0,6).join('\n'):'');
+}
+
+/* ============ views ============ */
+const seg=(k,opts,cur,fmtFn)=>`<div class="seg" role="group">${opts.map(o=>`<button class="${o==cur?'on':''}" data-act="seg" data-k="${k}" data-v="${o}" aria-pressed="${o==cur}">${fmtFn?fmtFn(o):label(String(o))}</button>`).join('')}</div>`;
+const chips=(k,opts,cur)=>`<div class="chips">${opts.map(o=>`<button class="chip ${cur.includes(o)?'on':''}" data-act="chip" data-k="${k}" data-v="${o}" aria-pressed="${cur.includes(o)}">${esc(label(o))}</button>`).join('')}</div>`;
+function controlsHTML(){
+  return `<div class="group"><h3>Pace</h3>${seg('pace',['slow','steady','quick'],S.pace)}
+    <div class="label">Quicker pace unlocks stronger cards sooner.</div></div>
+  ${[0,1].map(p=>`<div class="group"><h3 class="p${p}">${esc(S.names[p])}</h3>
+    <div class="label">Passion level: ${PASSION[S.passion[p]-1]}</div>${seg('passion:'+p,[1,2,3,4,5],S.passion[p],n=>n)}
+    <div class="label">Wearing</div>${chips('wear:'+p,allClothing(),S.wearing[p])}</div>`).join('')}
+  <div class="group"><h3>Toys and props on hand</h3>${chips('toy',allToys(),S.toys)}</div>`;
+}
+function refreshControls(){document.querySelectorAll('.controls').forEach(el=>el.innerHTML=controlsHTML())}
+
+function renderSetup(){
+  $('#app').innerHTML=`<div class="wrap">
+    <h1 class="hero">Set the mood</h1>
+    <p class="sub">Tell the game who is playing and what you have on hand. You can change any of it mid-game from the Adjust button.</p>
+    <div class="panel"><div class="two">
+      ${[0,1].map(p=>`<div class="field"><label for="n${p}">Player ${p+1}</label><input type="text" id="n${p}" data-name="${p}" value="${esc(S.names[p])}" maxlength="24" autocomplete="off"></div>`).join('')}
+    </div><div class="controls">${controlsHTML()}</div></div>
+    <div class="tools">
+      <button class="btn primary" data-act="start">Start new game</button>
+      ${S.started?'<button class="btn" data-act="goto" data-v="game">Back to current game</button>':''}
+      <button class="btn" data-act="goto" data-v="library">Card library</button>
+    </div></div>`;
+}
+
+function renderGame(){
+  $('#app').innerHTML=`<div class="wrap">
+    <div class="top"><div class="who" id="who"></div>
+      <div class="btns"><span class="clock" id="clock"></span>
+        <button class="btn small" data-act="panel">Adjust</button>
+        <button class="btn small" data-act="goto" data-v="library">Cards</button>
+        <button class="btn small" data-act="goto" data-v="setup">New game</button></div></div>
+    <div class="board" id="board"></div></div>`;
+  renderBoard();
+}
+function renderBoard(){
+  const cells=BOARD_TYPES.map((t,i)=>{
+    const [r,c]=RING[i];
+    const toks=[0,1].filter(p=>S.pos===i).length?`<span class="tok ${S.turn===0?'a':'b'}" title="${esc(S.names[S.turn])}"></span>`:'';
+    return `<div class="cell t-${t} ${S.pos===i?'now':''}" style="grid-row:${r+1};grid-column:${c+1}"><span>${VENUES[t].short}</span><span class="toks">${toks}</span></div>`;
+  }).join('');
+  const dice=ui.dice?`<div class="dice"><div class="die">${ui.dice[0]}</div><div class="die">${ui.dice[1]}</div></div>`:'';
+  const center=`<div class="center"><div class="turn"><span class="p${S.turn}">${esc(S.names[S.turn])}</span>'s turn</div>${dice}
+    ${ui.phase==='idle'?'<button class="btn primary roll" data-act="roll">Roll the dice</button>':'<div class="hint">'+(ui.phase==='moving'?'Moving…':'')+'</div>'}
+    <div class="hint">${VENUES[BOARD_TYPES[S.pos]].name}</div></div>`;
+  $('#board').innerHTML=cells+center;
+  $('#who').innerHTML=`<b class="p0">${esc(S.names[0])}</b> &amp; <b class="p1">${esc(S.names[1])}</b>`;
+  updateClock();
+}
+const updateClock=()=>{const c=$('#clock');if(c)c.textContent=Math.floor(S.elapsed/60)+' min played'};
+
+function renderLayer(){
+  let h='';
+  if(ui.phase==='choose'){
+    const v=VENUES[BOARD_TYPES[S.pos]];
+    h=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-label="Choose roles">
+      <div class="venue"><span>${v.name}</span></div>
+      <h2 style="margin-top:8px;font-size:1.5rem"><span class="p${S.turn}">${esc(S.names[S.turn])}</span>, give or receive?</h2>
+      <div class="choices">
+        <button class="btn" data-act="role" data-v="give">I'll give<small>${esc(S.names[S.turn])} does the action for ${esc(S.names[1-S.turn])}</small></button>
+        <button class="btn" data-act="role" data-v="receive">I'll receive<small>${esc(S.names[1-S.turn])} does the action for ${esc(S.names[S.turn])}</small></button>
+        <button class="btn" data-act="role" data-v="coin">Flip a coin<small>Let fate decide</small></button>
+      </div></div></div>`;
+  }else if(ui.phase==='card'&&ui.card){
+    const {a,space,perf}=ui.card,v=VENUES[space]||{name:'Card'};
+    h=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-label="Card">
+      <div class="venue"><span>${v.name}</span><span class="dots" title="Intensity ${a.intensity} of 5">${[1,2,3,4,5].map(n=>`<i class="${n<=a.intensity?'on':''}"></i>`).join('')}</span></div>
+      <div class="cardtext">${fmt(a.text,perf)}</div>
+      <div class="cardfoot"><div class="btns">
+        <button class="btn primary" data-act="done">Done</button>
+        <button class="btn" data-act="skip">Skip</button>
+        <button class="btn" data-act="reverse">Reverse roles</button></div>
+        ${a.id==='_fallback'?'':'<label class="never"><input type="checkbox" id="never"> Never show again</label>'}
+      </div></div></div>`;
+  }
+  if(ui.panel){
+    h+=`<div class="scrim sheetwrap"><div class="sheet" role="dialog" aria-modal="true" aria-label="Adjust game">
+      <div class="sheet-head"><h2>Adjust</h2><button class="btn small primary" data-act="panel">Back to game</button></div>
+      <div class="controls">${controlsHTML()}</div>
+      <div class="tools"><button class="btn small" data-act="ff">Test: skip ahead 10 min</button></div></div></div>`;
+  }
+  $('#layer').innerHTML=h;
+}
+
+/* ============ library ============ */
+function renderLibrary(){
+  const venueOpts=(sel,any)=>`${any?`<option value="">All venues</option>`:''}${Object.keys(VENUES).map(k=>`<option value="${k}" ${sel===k?'selected':''}>${VENUES[k].name}</option>`).join('')}<option value="any" ${sel==='any'?'selected':''}>Any venue</option>`;
+  $('#app').innerHTML=`<div class="wrap">
+    <div class="top"><h1 class="hero" style="margin:0">Card library</h1>
+      <div class="btns"><button class="btn primary" data-act="goto" data-v="${S.started?'game':'setup'}">Back</button></div></div>
+    <div class="panel"><h2>Add a card</h2>
+      <div class="two"><div class="field"><label for="f-venue">Venue</label><select id="f-venue">${venueOpts('massage',false)}</select></div>
+      <div class="field"><label for="f-int">Intensity (1 gentle to 5 fiery)</label><select id="f-int">${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join('')}</select></div></div>
+      <div class="field"><label for="f-text">Card text. Use {performer} and {recipient}.</label><textarea id="f-text"></textarea></div>
+      <div class="two"><div class="field"><label for="f-min">Earliest minute it can appear</label><input type="number" id="f-min" value="0" min="0"></div>
+      <div class="field"><label for="f-toys">Toys required (comma separated)</label><input type="text" id="f-toys" placeholder="massage_oil, ice"></div></div>
+      <div class="two"><div class="field"><label for="f-pw">Performer must be wearing</label><input type="text" id="f-pw" placeholder="shoes"></div>
+      <div class="field"><label for="f-pnw">Performer must NOT be wearing</label><input type="text" id="f-pnw"></div>
+      <div class="field"><label for="f-rw">Recipient must be wearing</label><input type="text" id="f-rw" placeholder="socks"></div>
+      <div class="field"><label for="f-rnw">Recipient must NOT be wearing</label><input type="text" id="f-rnw" placeholder="top"></div></div>
+      <button class="btn primary" data-act="addcard">Add card</button><div class="msg" id="addmsg"></div></div>
+    <div class="panel"><h2>Bulk edit with a spreadsheet</h2>
+      <p class="sub" style="margin-bottom:8px">Export to CSV, edit in Excel or Sheets, then import. Cards are matched by <b>id</b>, so re-importing updates existing cards. Cards you hid stay hidden.</p>
+      <div class="tools"><button class="btn small" data-act="csvexport">Show CSV of library</button>
+        <button class="btn small" data-act="csvdownload">Download CSV</button>
+        <label class="btn small" style="display:inline-flex;align-items:center">Choose CSV file<input type="file" id="csvfile" accept=".csv,text/csv,text/plain" style="display:none"></label></div>
+      <textarea id="csvbox" style="min-height:140px;font-family:ui-monospace,Menlo,monospace;font-size:.82rem" placeholder="Paste CSV here, or use Show CSV of library."></textarea>
+      <div class="tools"><button class="btn small primary" data-act="csvmerge">Import and merge</button>
+        <button class="btn small danger" data-act="csvreplace">Import and replace everything</button></div>
+      <div class="msg" id="csvmsg">${esc(ui.libMsg)}</div></div>
+    <div class="panel"><h2>Your cards</h2>
+      <div class="two"><div class="field"><label for="l-venue">Venue</label><select id="l-venue" data-lib="venue">${venueOpts(ui.lib.venue,true)}</select></div>
+      <div class="field"><label for="l-q">Search</label><input type="text" id="l-q" data-lib="q" value="${esc(ui.lib.q)}"></div></div>
+      <div class="seg" style="margin-bottom:6px">${['all','hidden','off'].map(o=>`<button class="${ui.lib.show===o?'on':''}" data-act="libshow" data-v="${o}">${o==='all'?'All':o==='hidden'?'Hidden':'Turned off'}</button>`).join('')}</div>
+      <div class="tools"><button class="btn small" data-act="unhideall">Restore all hidden cards</button><button class="btn small danger" data-act="resetseed">Reset to starter cards</button></div>
+      <div id="liblist"></div></div></div>`;
+  renderLibList();
+}
+function renderLibList(){
+  const {venue,q:qs,show}=ui.lib,needle=qs.trim().toLowerCase();
+  const list=ACTIONS.filter(a=>(!venue||a.venue===venue)&&(!needle||a.text.toLowerCase().includes(needle)||a.id.toLowerCase()===needle)
+    &&(show==='all'||(show==='hidden'&&HIDDEN.has(a.id))||(show==='off'&&!a.enabled)));
+  $('#liblist').innerHTML=`<div class="meta" style="color:var(--dim);margin:8px 0">${list.length} of ${ACTIONS.length} cards · ${HIDDEN.size} hidden</div>`+
+  list.map(a=>{
+    const req=[a.pw.length?'performer wears '+a.pw.join('/'):'',a.pnw.length?'performer not '+a.pnw.join('/'):'',a.rw.length?'recipient wears '+a.rw.join('/'):'',a.rnw.length?'recipient not '+a.rnw.join('/'):'',a.toys.length?'needs '+a.toys.join('/'):'',a.min_minutes?'after '+a.min_minutes+' min':''].filter(Boolean).join(' · ');
+    return `<div class="row ${a.enabled&&!HIDDEN.has(a.id)?'':'off'}">
+      <div class="txt"><div><span class="badge">${(VENUES[a.venue]||{name:a.venue}).name}</span><span class="badge">Intensity ${a.intensity}</span>${HIDDEN.has(a.id)?'<span class="badge hid">Hidden</span>':''}${a.enabled?'':'<span class="badge">Off</span>'}</div>
+      <div>${esc(a.text)}</div><div class="meta">${esc(a.id)}${req?' · '+esc(req):''}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${HIDDEN.has(a.id)?`<button class="btn small" data-act="unhide" data-v="${esc(a.id)}">Restore</button>`:''}
+        <button class="btn small" data-act="toggle" data-v="${esc(a.id)}">${a.enabled?'Turn off':'Turn on'}</button>
+        <button class="btn small danger" data-act="del" data-v="${esc(a.id)}">Delete</button></div></div>`;
+  }).join('');
+}
+
+function render(){
+  if(ui.screen==='setup')renderSetup();
+  else if(ui.screen==='game')renderGame();
+  else renderLibrary();
+  renderLayer();
+}
+
+/* ============ actions ============ */
+function endCard(hideIt){
+  const c=ui.card;
+  if(c&&c.a.id!=='_fallback'&&$('#never')&&$('#never').checked){HIDDEN.add(c.a.id);saveHidden()}
+}
+function move(steps){
+  ui.phase='moving';renderBoard();renderLayer();
+  const t=setInterval(()=>{
+    S.pos=(S.pos+1)%BOARD_TYPES.length;steps--;saveState();renderBoard();
+    if(steps<=0){clearInterval(t);ui.phase='choose';renderBoard();renderLayer()}
+  },150);
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const act=el.dataset.act,v=el.dataset.v,k=el.dataset.k;
+  switch(act){
+    case 'seg':
+      if(k==='pace')S.pace=v;else if(k.startsWith('passion:'))S.passion[+k.split(':')[1]]=+v;
+      saveState();refreshControls();break;
+    case 'chip':{
+      const arr=k==='toy'?S.toys:S.wearing[+k.split(':')[1]];const i=arr.indexOf(v);
+      if(i>=0)arr.splice(i,1);else arr.push(v);saveState();refreshControls();break}
+    case 'start':
+      S.pos=0;S.turn=0;S.elapsed=0;S.recent=[];S.started=true;saveState();ui.dice=null;ui.phase='idle';ui.screen='game';render();break;
+    case 'goto':ui.screen=v;ui.panel=false;render();break;
+    case 'panel':ui.panel=!ui.panel;renderLayer();break;
+    case 'ff':S.elapsed+=600;saveState();updateClock();break;
+    case 'roll':{
+      ui.dice=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)];
+      move(ui.dice[0]+ui.dice[1]);break}
+    case 'role':{
+      let perf=v==='give'?S.turn:v==='receive'?1-S.turn:(Math.random()<.5?S.turn:1-S.turn);
+      ui.card=drawCard(BOARD_TYPES[S.pos],perf);ui.phase='card';renderLayer();break}
+    case 'done':
+      endCard();S.turn=1-S.turn;saveState();ui.card=null;ui.phase='idle';ui.dice=null;renderBoard();renderLayer();break;
+    case 'skip':{
+      endCard();const c=ui.card;ui.card=drawCard(c.space,c.perf);renderLayer();break}
+    case 'reverse':{
+      endCard();const c=ui.card;ui.card=drawCard(c.space,1-c.perf);renderLayer();break}
+    case 'addcard':{
+      const g=id=>$('#'+id).value;
+      if(!g('f-text').trim()){$('#addmsg').textContent='Write the card text first.';break}
+      ACTIONS.push(mk({venue:g('f-venue'),intensity:g('f-int'),text:g('f-text'),min_minutes:g('f-min'),toys:g('f-toys'),pw:g('f-pw'),pnw:g('f-pnw'),rw:g('f-rw'),rnw:g('f-rnw')}));
+      saveActions();['f-text','f-toys','f-pw','f-pnw','f-rw','f-rnw'].forEach(id=>$('#'+id).value='');$('#f-min').value=0;
+      $('#addmsg').textContent='Card added.';renderLibList();break}
+    case 'csvexport':$('#csvbox').value=toCSV(ACTIONS);$('#csvmsg').textContent='CSV of '+ACTIONS.length+' cards is in the box. Select all and copy, or use Download.';break;
+    case 'csvdownload':{
+      try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([toCSV(ACTIONS)],{type:'text/csv'}));a.download='cards.csv';document.body.appendChild(a);a.click();a.remove();
+        $('#csvmsg').textContent='If nothing downloaded, use Show CSV of library and copy it from the box.'}catch(err){$('#csvmsg').textContent='Download is not available here. Use Show CSV of library and copy from the box.'}break}
+    case 'csvmerge':ui.libMsg=importCSV($('#csvbox').value,false);$('#csvmsg').textContent=ui.libMsg;renderLibList();break;
+    case 'csvreplace':ui.libMsg=importCSV($('#csvbox').value,true);$('#csvmsg').textContent=ui.libMsg;renderLibList();break;
+    case 'libshow':ui.lib.show=v;renderLibrary();break;
+    case 'unhide':HIDDEN.delete(v);saveHidden();renderLibList();break;
+    case 'unhideall':HIDDEN.clear();saveHidden();renderLibList();break;
+    case 'toggle':{const a=ACTIONS.find(x=>x.id===v);if(a){a.enabled=!a.enabled;saveActions();renderLibList()}break}
+    case 'del':ACTIONS=ACTIONS.filter(x=>x.id!==v);HIDDEN.delete(v);saveActions();saveHidden();renderLibList();break;
+    case 'resetseed':ACTIONS=seedActions();saveActions();renderLibList();break;
+  }
+});
+document.addEventListener('input',e=>{
+  if(e.target.dataset.name!==undefined){S.names[+e.target.dataset.name]=e.target.value||('Player '+(+e.target.dataset.name+1));saveState()}
+  if(e.target.dataset.lib){ui.lib[e.target.dataset.lib]=e.target.value;renderLibList()}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='csvfile'&&e.target.files[0]){
+    const fr=new FileReader();fr.onload=()=>{$('#csvbox').value=fr.result;$('#csvmsg').textContent='File loaded. Choose Import and merge, or Import and replace.'};fr.readAsText(e.target.files[0]);
+  }
+});
+setInterval(()=>{if(ui.screen==='game'&&S.started&&!document.hidden){S.elapsed+=5;saveState();updateClock()}},5000);
+
+render();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').catch(()=>{})});
+}
+</script>
+</body>
+</html>
