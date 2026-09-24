@@ -135,8 +135,9 @@ textarea{min-height:88px;resize:vertical}
 
 <script>
 /* ============ data ============ */
-const DEFAULT_CLOTHING=['top','bottoms','socks','shoes','jewelry','robe'];
-const DEFAULT_TOYS=['massage_oil','ice','feather','blindfold','candle','music'];
+const DEFAULT_CLOTHING=['top','bottoms','underwear','robe'];
+const DEFAULT_TOYS=['massage_oil','ice','feather','blindfold','candle'];
+const GENDERS=['female','male'];
 const PASSION=['Tender','Warm','Heated','Intense','Fiery'];
 const PACE={slow:0.6,steady:1,quick:1.8};
 const VENUES={
@@ -151,53 +152,55 @@ for(let r=1;r<7;r++)RING.push([r,6]);
 for(let c=5;c>=0;c--)RING.push([6,c]);
 for(let r=5;r>=1;r--)RING.push([r,0]);
 
-/* id, venue, intensity, min_minutes, performer_wearing, performer_not_wearing, recipient_wearing, recipient_not_wearing, toys, text */
+/* id, venue, intensity, min_minutes, performer_wearing, performer_not_wearing, recipient_wearing, recipient_not_wearing, toys, recipient_gender, text */
 const SEED=[
-['h01','home',1,0,'','','','','',"Start with a minute of holding hands. {performer} shares one thing they're hoping for tonight."],
-['h02','home',1,0,'','','','','',"{performer} and {recipient} each name a favorite moment from this week."],
-['m01','massage',1,0,'','','','','',"{performer} gives {recipient} a 3-minute shoulder massage."],
-['m02','massage',1,0,'','','','','',"{performer} massages {recipient}'s hands, one minute each."],
-['m03','massage',1,0,'','','','shoes','',"{performer} gives {recipient} a slow foot massage."],
-['m04','massage',2,8,'','','','top','massage_oil',"{performer} warms massage oil and rubs {recipient}'s back for five unhurried minutes."],
-['m05','massage',2,5,'','','','','',"{performer} massages {recipient}'s neck and scalp. {recipient} says when the pressure feels right."],
-['m06','massage',3,15,'','','','top','',"{performer} gives {recipient} a full back massage with long, slow strokes for five minutes."],
-['m07','massage',2,6,'','','','','candle',"{performer} drips warm massage-candle oil onto {recipient}'s shoulders and works it in."],
-['d01','dance',1,0,'','','','','',"{performer} leads {recipient} in a slow dance to the current song."],
-['d02','dance',1,0,'','','','','',"{recipient} picks the next song. {performer} asks for a dance."],
-['d03','dance',2,5,'','','','','',"Dance close for one full song. No talking, just eye contact."],
-['d04','dance',2,8,'','','','','',"{performer} whispers what they love most about {recipient} while you sway together."],
-['d05','dance',3,15,'','','','','',"{performer} dances just for {recipient} for one song while {recipient} watches and doesn't touch."],
-['g01','gym',1,0,'','','','','',"{performer} guides {recipient} through a slow arm and shoulder stretch."],
-['g02','gym',1,0,'','','','','',"Sit back to back and breathe together for one minute."],
-['g03','gym',2,5,'','','','','',"{performer} helps {recipient} stretch their legs, slowly and gently."],
-['g04','gym',2,8,'','','','','',"Play-wrestle for two minutes. The winner picks who gives on the next card."],
-['g05','gym',2,10,'','','','','',"{performer} picks up {recipient} for a hug, if it's comfortable, and holds them for ten seconds."],
-['c01','clinic',1,0,'','','','','',"{performer} takes {recipient}'s pulse at the wrist, then reports the result in a very serious voice."],
-['c02','clinic',1,0,'','','','','',"{performer} writes {recipient} a prescription: ten kisses, filled immediately."],
-['c03','clinic',2,6,'','','','','',"{performer} 'examines' {recipient} with fingertips only, very slowly, from head to toe."],
-['c04','clinic',2,10,'','','','','feather',"{performer} traces a feather along {recipient}'s arms and neck to test their reflexes."],
-['c05','clinic',3,15,'','','','','blindfold',"{recipient} wears a blindfold. {performer} tests their reflexes with different touches and {recipient} guesses each one."],
-['s01','spa',1,0,'','','','','',"{performer} washes and dries {recipient}'s hands gently."],
-['s02','spa',1,0,'','','','','',"Take turns brushing each other's hair for one minute."],
-['s03','spa',2,5,'','','','','',"{performer} kisses {recipient}'s neck and shoulders for two minutes."],
-['s04','spa',2,8,'','','','','ice',"{performer} slowly traces an ice cube along {recipient}'s arm."],
-['s05','spa',3,15,'','','','','',"Share a long, slow kiss and don't stop until the song changes."],
-['l01','lounge',1,0,'','','','','',"Each of you shares your favorite memory of the two of you."],
-['l02','lounge',1,0,'','','','','',"Trade three compliments each. No repeats."],
-['l03','lounge',1,0,'','','','','',"{performer} feeds {recipient} something sweet, if there's anything nearby."],
-['l04','lounge',2,6,'','','','','',"{performer} kisses {recipient} anywhere {recipient} chooses, for one minute."],
-['l05','lounge',2,8,'','','socks','','',"{performer} slowly removes {recipient}'s socks and kisses each foot."],
-['l06','lounge',3,15,'','','top','','',"{performer} slowly takes off {recipient}'s top."],
-['l07','lounge',2,8,'','','','','candle',"Light the candle and share a slow kiss by its glow."],
-['x01','chance',1,0,'','','','','',"Pick a song for the two of you and stay close until it ends."],
-['x02','chance',1,0,'','','','','',"{performer} whispers a secret compliment in {recipient}'s ear."],
-['x03','chance',2,5,'','','','','',"{recipient} asks for a kiss anywhere for one minute. {performer} delivers."],
-['x04','chance',2,10,'','','','','',"Hold each other for two minutes with no talking."]
+['h01','home',1,0,'','','','','','',"Start with a minute of holding hands. {performer} shares one thing they're hoping for tonight."],
+['h02','home',1,0,'','','','','','',"{performer} and {recipient} each name a favorite moment from this week."],
+['m01','massage',1,0,'','','','','','',"{performer} gives {recipient} a 3-minute shoulder massage."],
+['m02','massage',1,0,'','','','','','',"{performer} massages {recipient}'s hands, one minute each."],
+['m03','massage',1,0,'','','','','','',"{performer} gives {recipient} a slow foot massage."],
+['m04','massage',2,8,'','','','top','massage_oil','',"{performer} warms massage oil and rubs {recipient}'s back for five unhurried minutes."],
+['m05','massage',2,5,'','','','','','',"{performer} massages {recipient}'s neck and scalp. {recipient} says when the pressure feels right."],
+['m06','massage',3,15,'','','','top','','',"{performer} gives {recipient} a full back massage with long, slow strokes for five minutes."],
+['m07','massage',2,6,'','','','','candle','',"{performer} drips warm massage-candle oil onto {recipient}'s shoulders and works it in."],
+['d01','dance',1,0,'','','','','','',"{performer} leads {recipient} in a slow dance to the current song."],
+['d02','dance',1,0,'','','','','','',"{recipient} picks the next song. {performer} asks for a dance."],
+['d03','dance',2,5,'','','','','','',"Dance close for one full song. No talking, just eye contact."],
+['d04','dance',2,8,'','','','','','',"{performer} whispers what they love most about {recipient} while you sway together."],
+['d05','dance',3,15,'','','','','','',"{performer} dances just for {recipient} for one song while {recipient} watches and doesn't touch."],
+['g01','gym',1,0,'','','','','','',"{performer} guides {recipient} through a slow arm and shoulder stretch."],
+['g02','gym',1,0,'','','','','','',"Sit back to back and breathe together for one minute."],
+['g03','gym',2,5,'','','','','','',"{performer} helps {recipient} stretch their legs, slowly and gently."],
+['g04','gym',2,8,'','','','','','',"Play-wrestle for two minutes. The winner picks who gives on the next card."],
+['g05','gym',2,10,'','','','','','',"{performer} picks up {recipient} for a hug, if it's comfortable, and holds them for ten seconds."],
+['c01','clinic',1,0,'','','','','','',"{performer} takes {recipient}'s pulse at the wrist, then reports the result in a very serious voice."],
+['c02','clinic',1,0,'','','','','','',"{performer} writes {recipient} a prescription: ten kisses, filled immediately."],
+['c03','clinic',2,6,'','','','','','',"{performer} 'examines' {recipient} with fingertips only, very slowly, from head to toe."],
+['c04','clinic',2,10,'','','','','feather','',"{performer} traces a feather along {recipient}'s arms and neck to test their reflexes."],
+['c05','clinic',3,15,'','','','','blindfold','',"{recipient} wears a blindfold. {performer} tests their reflexes with different touches and {recipient} guesses each one."],
+['s01','spa',1,0,'','','','','','',"{performer} washes and dries {recipient}'s hands gently."],
+['s02','spa',1,0,'','','','','','',"Take turns brushing each other's hair for one minute."],
+['s03','spa',2,5,'','','','','','',"{performer} kisses {recipient}'s neck and shoulders for two minutes."],
+['s04','spa',2,8,'','','','','ice','',"{performer} slowly traces an ice cube along {recipient}'s arm."],
+['s05','spa',3,15,'','','','','','',"Share a long, slow kiss and don't stop until the song changes."],
+['l01','lounge',1,0,'','','','','','',"Each of you shares your favorite memory of the two of you."],
+['l02','lounge',1,0,'','','','','','',"Trade three compliments each. No repeats."],
+['l03','lounge',1,0,'','','','','','',"{performer} feeds {recipient} something sweet, if there's anything nearby."],
+['l04','lounge',2,6,'','','','','','',"{performer} kisses {recipient} anywhere {recipient} chooses, for one minute."],
+['l05','lounge',3,15,'','','underwear','','','',"{performer} slowly slips off {recipient}'s underwear."],
+['l06','lounge',3,15,'','','top','','','',"{performer} slowly takes off {recipient}'s top."],
+['l07','lounge',2,8,'','','','','candle','',"Light the candle and share a slow kiss by its glow."],
+['x01','chance',1,0,'','','','','','',"Pick a song for the two of you and stay close until it ends."],
+['x02','chance',1,0,'','','','','','',"{performer} whispers a secret compliment in {recipient}'s ear."],
+['x03','chance',2,5,'','','','','','',"{recipient} asks for a kiss anywhere for one minute. {performer} delivers."],
+['x04','chance',2,10,'','','','','','',"Hold each other for two minutes with no talking."],
+['g06','gym',2,10,'','','','','','male',"{performer} traces fingers slowly along {recipient}'s chest and shoulders."],
+['g07','gym',2,10,'','','','','','female',"{performer} traces fingers slowly along {recipient}'s collarbone and shoulders."]
 ];
-const FALLBACK={id:'_fallback',venue:'any',intensity:1,min_minutes:0,pw:[],pnw:[],rw:[],rnw:[],toys:[],enabled:true,
+const FALLBACK={id:'_fallback',venue:'any',intensity:1,min_minutes:0,pw:[],pnw:[],rw:[],rnw:[],toys:[],rg:[],enabled:true,
   text:"Take a moment. {performer} tells {recipient} one thing they appreciated today."};
 
-const COLS=['id','venue','text','intensity','min_minutes','performer_wearing','performer_not_wearing','recipient_wearing','recipient_not_wearing','toys','enabled'];
+const COLS=['id','venue','text','intensity','min_minutes','performer_wearing','performer_not_wearing','recipient_wearing','recipient_not_wearing','toys','recipient_gender','enabled'];
 
 /* ============ storage ============ */
 const $=s=>document.querySelector(s);
@@ -213,17 +216,18 @@ function mk(o){
   return {id:String(o.id||newId()).trim(),venue:String(o.venue||'any').trim().toLowerCase(),text:String(o.text||'').trim(),
     intensity:Math.min(5,Math.max(1,parseInt(o.intensity)||1)),min_minutes:Math.max(0,parseInt(o.min_minutes)||0),
     pw:tags(o.pw),pnw:tags(o.pnw),rw:tags(o.rw),rnw:tags(o.rnw),toys:tags(o.toys),
+    rg:tags(o.rg).filter(g=>GENDERS.includes(g)),
     enabled:!['0','false','no','off'].includes(en)};
 }
-function seedActions(){return SEED.map(r=>mk({id:r[0],venue:r[1],intensity:r[2],min_minutes:r[3],pw:r[4],pnw:r[5],rw:r[6],rnw:r[7],toys:r[8],text:r[9]}))}
+function seedActions(){return SEED.map(r=>mk({id:r[0],venue:r[1],intensity:r[2],min_minutes:r[3],pw:r[4],pnw:r[5],rw:r[6],rnw:r[7],toys:r[8],rg:r[9],text:r[10]}))}
 
 let ACTIONS=load('lb.actions.v1',null)||seedActions();
 let HIDDEN=new Set(load('lb.hidden.v1',[]));
 const saveActions=()=>save('lb.actions.v1',ACTIONS);
 const saveHidden=()=>save('lb.hidden.v1',[...HIDDEN]);
 
-function newState(){return {names:['Player 1','Player 2'],wearing:[['top','bottoms','socks','shoes'],['top','bottoms','socks','shoes']],
-  passion:[2,2],toys:[],pace:'steady',pos:0,turn:0,elapsed:0,started:false,recent:[]}}
+function newState(){return {names:['Player 1','Player 2'],wearing:[['top','bottoms','underwear'],['top','bottoms','underwear']],
+  genders:['female','male'],passion:[2,2],toys:[],pace:'steady',pos:0,turn:0,elapsed:0,started:false,recent:[]}}
 let S=Object.assign(newState(),load('lb.state.v1',{}));
 const saveState=()=>save('lb.state.v1',S);
 const ui={screen:S.started?'game':'setup',phase:'idle',dice:null,card:null,panel:false,lib:{venue:'',q:'',show:'all'},libMsg:''};
@@ -245,6 +249,7 @@ function pool(space,perf,relax){
     if(a.intensity>c||a.min_minutes>eff)return false;
     if(!a.pw.every(t=>wp.has(t))||a.pnw.some(t=>wp.has(t)))return false;
     if(!a.rw.every(t=>wr.has(t))||a.rnw.some(t=>wr.has(t)))return false;
+    if(a.rg.length&&!a.rg.includes(S.genders[rec]))return false;
     return a.toys.every(t=>toys.has(t));
   });
 }
@@ -268,6 +273,83 @@ const fmt=(text,perf)=>esc(text)
   .replace(/\{performer\}/g,`<b class="p${perf}">${esc(S.names[perf])}</b>`)
   .replace(/\{recipient\}/g,`<b class="p${1-perf}">${esc(S.names[1-perf])}</b>`);
 
+/* ============ dice sound ============ */
+function playDiceSound(){
+  try{
+    const ctx=playDiceSound._ctx||(playDiceSound._ctx=new (window.AudioContext||window.webkitAudioContext)());
+    if(ctx.state==='suspended')ctx.resume();
+    const now=ctx.currentTime,clicks=6+Math.floor(Math.random()*3);
+    for(let i=0;i<clicks;i++){
+      const t=now+i*0.045+Math.random()*0.02;
+      const buf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*0.03),ctx.sampleRate);
+      const data=buf.getChannelData(0);
+      for(let j=0;j<data.length;j++)data[j]=(Math.random()*2-1)*Math.pow(1-j/data.length,2);
+      const src=ctx.createBufferSource();src.buffer=buf;
+      const gain=ctx.createGain();gain.gain.value=0.25*(1-i/clicks*0.5);
+      const filt=ctx.createBiquadFilter();filt.type='bandpass';filt.frequency.value=1200+Math.random()*800;
+      src.connect(filt);filt.connect(gain);gain.connect(ctx.destination);
+      src.start(t);
+    }
+  }catch(e){}
+}
+
+/* ============ music ============ */
+function idbOpen(){return new Promise((res,rej)=>{
+  if(!('indexedDB' in window)){rej(new Error('no indexeddb'));return}
+  const req=indexedDB.open('lb-music-v1',1);
+  req.onupgradeneeded=()=>{req.result.createObjectStore('tracks',{keyPath:'id'})};
+  req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);
+})}
+const idbAll=()=>idbOpen().then(db=>new Promise((res,rej)=>{const rq=db.transaction('tracks','readonly').objectStore('tracks').getAll();rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error)}));
+const idbPut=rec=>idbOpen().then(db=>new Promise((res,rej)=>{const tx=db.transaction('tracks','readwrite');tx.objectStore('tracks').put(rec);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)}));
+const idbDel=id=>idbOpen().then(db=>new Promise((res,rej)=>{const tx=db.transaction('tracks','readwrite');tx.objectStore('tracks').delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)}));
+
+const AUDIO=new Audio();AUDIO.preload='none';
+const MUSIC={tracks:[],mode:load('lb.music.mode','loop-all'),selected:load('lb.music.selected',null),playing:false,idx:0,url:null,ready:false};
+
+function loadMusicList(){
+  idbAll().then(list=>{
+    MUSIC.tracks=list.map(r=>({id:r.id,name:r.name,blob:r.blob}));
+    if((!MUSIC.selected||!MUSIC.tracks.some(t=>t.id===MUSIC.selected))&&MUSIC.tracks.length)MUSIC.selected=MUSIC.tracks[0].id;
+    MUSIC.ready=true;refreshControls();
+  }).catch(()=>{MUSIC.ready=true});
+}
+function addTracks(files){
+  const jobs=[...files].map(f=>{const id=newId();return idbPut({id,name:f.name,blob:f}).then(()=>MUSIC.tracks.push({id,name:f.name,blob:f}))});
+  Promise.all(jobs).then(()=>{
+    if(!MUSIC.selected&&MUSIC.tracks.length){MUSIC.selected=MUSIC.tracks[0].id;save('lb.music.selected',MUSIC.selected)}
+    refreshControls();
+  });
+}
+function removeTrack(id){
+  idbDel(id).catch(()=>{});
+  MUSIC.tracks=MUSIC.tracks.filter(t=>t.id!==id);
+  if(MUSIC.selected===id){MUSIC.selected=MUSIC.tracks[0]?MUSIC.tracks[0].id:null;save('lb.music.selected',MUSIC.selected)}
+  if(!MUSIC.tracks.length){AUDIO.pause();MUSIC.playing=false}
+  refreshControls();
+}
+function currentTrack(){
+  if(!MUSIC.tracks.length)return null;
+  if(MUSIC.mode==='repeat-one')return MUSIC.tracks.find(t=>t.id===MUSIC.selected)||MUSIC.tracks[0];
+  return MUSIC.tracks[MUSIC.idx%MUSIC.tracks.length];
+}
+function playCurrentTrack(){
+  const t=currentTrack();if(!t)return;
+  if(MUSIC.url)URL.revokeObjectURL(MUSIC.url);
+  MUSIC.url=URL.createObjectURL(t.blob);
+  AUDIO.src=MUSIC.url;AUDIO.loop=(MUSIC.mode==='repeat-one');
+  AUDIO.play().then(()=>{MUSIC.playing=true;refreshControls()}).catch(()=>{MUSIC.playing=false;refreshControls()});
+}
+function toggleMusic(){
+  if(!MUSIC.tracks.length)return;
+  if(MUSIC.playing){AUDIO.pause();MUSIC.playing=false;refreshControls()}
+  else playCurrentTrack();
+}
+AUDIO.addEventListener('ended',()=>{
+  if(MUSIC.mode==='loop-all'&&MUSIC.tracks.length){MUSIC.idx=(MUSIC.idx+1)%MUSIC.tracks.length;playCurrentTrack()}
+});
+loadMusicList();
+
 /* ============ csv ============ */
 function parseCSV(t){
   const rows=[];let row=[],f='',q=false;
@@ -285,7 +367,7 @@ function parseCSV(t){
 const q=v=>{v=String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 function toCSV(list){
   const lines=[COLS.join(',')];
-  list.forEach(a=>lines.push([a.id,a.venue,a.text,a.intensity,a.min_minutes,a.pw.join('|'),a.pnw.join('|'),a.rw.join('|'),a.rnw.join('|'),a.toys.join('|'),a.enabled?1:0].map(q).join(',')));
+  list.forEach(a=>lines.push([a.id,a.venue,a.text,a.intensity,a.min_minutes,a.pw.join('|'),a.pnw.join('|'),a.rw.join('|'),a.rnw.join('|'),a.toys.join('|'),a.rg.join('|'),a.enabled?1:0].map(q).join(',')));
   return lines.join('\n');
 }
 function importCSV(text,replace){
@@ -298,7 +380,7 @@ function importCSV(text,replace){
     const g=name=>ix(name)>=0?(r[ix(name)]||''):'';
     if(!g('text').trim()){warn.push('Row '+(n+2)+': no text, skipped.');return}
     const a=mk({id:g('id'),venue:g('venue')||'any',text:g('text'),intensity:g('intensity'),min_minutes:g('min_minutes'),
-      pw:g('performer_wearing'),pnw:g('performer_not_wearing'),rw:g('recipient_wearing'),rnw:g('recipient_not_wearing'),toys:g('toys'),enabled:ix('enabled')>=0?g('enabled')||'1':'1'});
+      pw:g('performer_wearing'),pnw:g('performer_not_wearing'),rw:g('recipient_wearing'),rnw:g('recipient_not_wearing'),toys:g('toys'),rg:g('recipient_gender'),enabled:ix('enabled')>=0?g('enabled')||'1':'1'});
     if(a.venue!=='any'&&!VENUES[a.venue])warn.push('Row '+(n+2)+': unknown venue "'+a.venue+'". Use one of: '+Object.keys(VENUES).join(', ')+', any.');
     incoming.push(a);
   });
@@ -311,13 +393,29 @@ function importCSV(text,replace){
 /* ============ views ============ */
 const seg=(k,opts,cur,fmtFn)=>`<div class="seg" role="group">${opts.map(o=>`<button class="${o==cur?'on':''}" data-act="seg" data-k="${k}" data-v="${o}" aria-pressed="${o==cur}">${fmtFn?fmtFn(o):label(String(o))}</button>`).join('')}</div>`;
 const chips=(k,opts,cur)=>`<div class="chips">${opts.map(o=>`<button class="chip ${cur.includes(o)?'on':''}" data-act="chip" data-k="${k}" data-v="${o}" aria-pressed="${cur.includes(o)}">${esc(label(o))}</button>`).join('')}</div>`;
+function musicHTML(){
+  if(!('indexedDB' in window))return `<div class="group"><h3>Music</h3><div class="label">This browser can't store songs. Try a different browser.</div></div>`;
+  const list=MUSIC.tracks;
+  const modeSeg=`<div class="seg">${['loop-all','repeat-one'].map(m=>`<button class="${MUSIC.mode===m?'on':''}" data-act="musicmode" data-v="${m}">${m==='loop-all'?'Loop all':'Repeat one'}</button>`).join('')}</div>`;
+  const selectHtml=MUSIC.mode==='repeat-one'?`<div class="field" style="margin-top:8px"><label for="music-track">Song to repeat</label>
+    <select id="music-track">${list.map(t=>`<option value="${esc(t.id)}" ${t.id===MUSIC.selected?'selected':''}>${esc(t.name)}</option>`).join('')}</select></div>`:'';
+  const rows=list.map(t=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><div class="txt">${esc(t.name)}</div>
+    <button class="btn small danger" data-act="musicdel" data-v="${esc(t.id)}">Remove</button></div>`).join('')||'<div class="label">No songs added yet.</div>';
+  return `<div class="group"><h3>Music</h3>
+    <div class="label">Add songs from this device. They stay stored here only, in this browser.</div>
+    <div class="tools"><label class="btn small" style="display:inline-flex;align-items:center">Add songs<input type="file" id="musicfile" accept="audio/*" multiple style="display:none"></label>
+    <button class="btn small ${MUSIC.playing?'primary':''}" data-act="musictoggle" ${list.length?'':'disabled'}>${MUSIC.playing?'Pause':'Play'}</button></div>
+    ${modeSeg}${selectHtml}<div>${rows}</div></div>`;
+}
 function controlsHTML(){
   return `<div class="group"><h3>Pace</h3>${seg('pace',['slow','steady','quick'],S.pace)}
     <div class="label">Quicker pace unlocks stronger cards sooner.</div></div>
   ${[0,1].map(p=>`<div class="group"><h3 class="p${p}">${esc(S.names[p])}</h3>
+    <div class="label">Gender, for cards written for one</div>${seg('gender:'+p,GENDERS,S.genders[p])}
     <div class="label">Passion level: ${PASSION[S.passion[p]-1]}</div>${seg('passion:'+p,[1,2,3,4,5],S.passion[p],n=>n)}
     <div class="label">Wearing</div>${chips('wear:'+p,allClothing(),S.wearing[p])}</div>`).join('')}
-  <div class="group"><h3>Toys and props on hand</h3>${chips('toy',allToys(),S.toys)}</div>`;
+  <div class="group"><h3>Toys and props on hand</h3>${chips('toy',allToys(),S.toys)}</div>
+  ${musicHTML()}`;
 }
 function refreshControls(){document.querySelectorAll('.controls').forEach(el=>el.innerHTML=controlsHTML())}
 
@@ -406,10 +504,13 @@ function renderLibrary(){
       <div class="field"><label for="f-text">Card text. Use {performer} and {recipient}.</label><textarea id="f-text"></textarea></div>
       <div class="two"><div class="field"><label for="f-min">Earliest minute it can appear</label><input type="number" id="f-min" value="0" min="0"></div>
       <div class="field"><label for="f-toys">Toys required (comma separated)</label><input type="text" id="f-toys" placeholder="massage_oil, ice"></div></div>
-      <div class="two"><div class="field"><label for="f-pw">Performer must be wearing</label><input type="text" id="f-pw" placeholder="shoes"></div>
+      <div class="two"><div class="field"><label for="f-pw">Performer must be wearing</label><input type="text" id="f-pw" placeholder="underwear"></div>
       <div class="field"><label for="f-pnw">Performer must NOT be wearing</label><input type="text" id="f-pnw"></div>
-      <div class="field"><label for="f-rw">Recipient must be wearing</label><input type="text" id="f-rw" placeholder="socks"></div>
+      <div class="field"><label for="f-rw">Recipient must be wearing</label><input type="text" id="f-rw" placeholder="underwear"></div>
       <div class="field"><label for="f-rnw">Recipient must NOT be wearing</label><input type="text" id="f-rnw" placeholder="top"></div></div>
+      <div class="field"><label>Recipient's gender. Leave both unchecked, or check both, for a card that works either way.</label>
+        <div class="chips"><label class="btn small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="f-gf"> Female recipient</label>
+        <label class="btn small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="f-gm"> Male recipient</label></div></div>
       <button class="btn primary" data-act="addcard">Add card</button><div class="msg" id="addmsg"></div></div>
     <div class="panel"><h2>Bulk edit with a spreadsheet</h2>
       <p class="sub" style="margin-bottom:8px">Export to CSV, edit in Excel or Sheets, then import. Cards are matched by <b>id</b>, so re-importing updates existing cards. Cards you hid stay hidden.</p>
@@ -434,7 +535,7 @@ function renderLibList(){
     &&(show==='all'||(show==='hidden'&&HIDDEN.has(a.id))||(show==='off'&&!a.enabled)));
   $('#liblist').innerHTML=`<div class="meta" style="color:var(--dim);margin:8px 0">${list.length} of ${ACTIONS.length} cards · ${HIDDEN.size} hidden</div>`+
   list.map(a=>{
-    const req=[a.pw.length?'performer wears '+a.pw.join('/'):'',a.pnw.length?'performer not '+a.pnw.join('/'):'',a.rw.length?'recipient wears '+a.rw.join('/'):'',a.rnw.length?'recipient not '+a.rnw.join('/'):'',a.toys.length?'needs '+a.toys.join('/'):'',a.min_minutes?'after '+a.min_minutes+' min':''].filter(Boolean).join(' · ');
+    const req=[a.pw.length?'performer wears '+a.pw.join('/'):'',a.pnw.length?'performer not '+a.pnw.join('/'):'',a.rw.length?'recipient wears '+a.rw.join('/'):'',a.rnw.length?'recipient not '+a.rnw.join('/'):'',a.toys.length?'needs '+a.toys.join('/'):'',a.rg.length===1?'recipient is '+a.rg[0]:'',a.min_minutes?'after '+a.min_minutes+' min':''].filter(Boolean).join(' · ');
     return `<div class="row ${a.enabled&&!HIDDEN.has(a.id)?'':'off'}">
       <div class="txt"><div><span class="badge">${(VENUES[a.venue]||{name:a.venue}).name}</span><span class="badge">Intensity ${a.intensity}</span>${HIDDEN.has(a.id)?'<span class="badge hid">Hidden</span>':''}${a.enabled?'':'<span class="badge">Off</span>'}</div>
       <div>${esc(a.text)}</div><div class="meta">${esc(a.id)}${req?' · '+esc(req):''}</div></div>
@@ -469,7 +570,9 @@ document.addEventListener('click',e=>{
   const act=el.dataset.act,v=el.dataset.v,k=el.dataset.k;
   switch(act){
     case 'seg':
-      if(k==='pace')S.pace=v;else if(k.startsWith('passion:'))S.passion[+k.split(':')[1]]=+v;
+      if(k==='pace')S.pace=v;
+      else if(k.startsWith('passion:'))S.passion[+k.split(':')[1]]=+v;
+      else if(k.startsWith('gender:'))S.genders[+k.split(':')[1]]=v;
       saveState();refreshControls();break;
     case 'chip':{
       const arr=k==='toy'?S.toys:S.wearing[+k.split(':')[1]];const i=arr.indexOf(v);
@@ -480,6 +583,7 @@ document.addEventListener('click',e=>{
     case 'panel':ui.panel=!ui.panel;renderLayer();break;
     case 'ff':S.elapsed+=600;saveState();updateClock();break;
     case 'roll':{
+      playDiceSound();
       ui.dice=[1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)];
       move(ui.dice[0]+ui.dice[1]);break}
     case 'role':{
@@ -494,8 +598,9 @@ document.addEventListener('click',e=>{
     case 'addcard':{
       const g=id=>$('#'+id).value;
       if(!g('f-text').trim()){$('#addmsg').textContent='Write the card text first.';break}
-      ACTIONS.push(mk({venue:g('f-venue'),intensity:g('f-int'),text:g('f-text'),min_minutes:g('f-min'),toys:g('f-toys'),pw:g('f-pw'),pnw:g('f-pnw'),rw:g('f-rw'),rnw:g('f-rnw')}));
-      saveActions();['f-text','f-toys','f-pw','f-pnw','f-rw','f-rnw'].forEach(id=>$('#'+id).value='');$('#f-min').value=0;
+      const rg=[$('#f-gf').checked?'female':'',$('#f-gm').checked?'male':''].filter(Boolean).join('|');
+      ACTIONS.push(mk({venue:g('f-venue'),intensity:g('f-int'),text:g('f-text'),min_minutes:g('f-min'),toys:g('f-toys'),pw:g('f-pw'),pnw:g('f-pnw'),rw:g('f-rw'),rnw:g('f-rnw'),rg}));
+      saveActions();['f-text','f-toys','f-pw','f-pnw','f-rw','f-rnw'].forEach(id=>$('#'+id).value='');$('#f-min').value=0;$('#f-gf').checked=false;$('#f-gm').checked=false;
       $('#addmsg').textContent='Card added.';renderLibList();break}
     case 'csvexport':$('#csvbox').value=toCSV(ACTIONS);$('#csvmsg').textContent='CSV of '+ACTIONS.length+' cards is in the box. Select all and copy, or use Download.';break;
     case 'csvdownload':{
@@ -509,6 +614,9 @@ document.addEventListener('click',e=>{
     case 'toggle':{const a=ACTIONS.find(x=>x.id===v);if(a){a.enabled=!a.enabled;saveActions();renderLibList()}break}
     case 'del':ACTIONS=ACTIONS.filter(x=>x.id!==v);HIDDEN.delete(v);saveActions();saveHidden();renderLibList();break;
     case 'resetseed':ACTIONS=seedActions();saveActions();renderLibList();break;
+    case 'musicmode':MUSIC.mode=v;save('lb.music.mode',v);if(MUSIC.playing)playCurrentTrack();else refreshControls();break;
+    case 'musictoggle':toggleMusic();break;
+    case 'musicdel':removeTrack(v);break;
   }
 });
 document.addEventListener('input',e=>{
@@ -519,6 +627,8 @@ document.addEventListener('change',e=>{
   if(e.target.id==='csvfile'&&e.target.files[0]){
     const fr=new FileReader();fr.onload=()=>{$('#csvbox').value=fr.result;$('#csvmsg').textContent='File loaded. Choose Import and merge, or Import and replace.'};fr.readAsText(e.target.files[0]);
   }
+  if(e.target.id==='musicfile'&&e.target.files.length)addTracks(e.target.files);
+  if(e.target.id==='music-track'){MUSIC.selected=e.target.value;save('lb.music.selected',MUSIC.selected);if(MUSIC.playing)playCurrentTrack()}
 });
 setInterval(()=>{if(ui.screen==='game'&&S.started&&!document.hidden){S.elapsed+=5;saveState();updateClock()}},5000);
 
