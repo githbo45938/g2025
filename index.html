@@ -315,8 +315,22 @@ function loadMusicList(){
   }).catch(()=>{MUSIC.ready=true});
 }
 function addTracks(files){
-  const jobs=[...files].map(f=>{const id=newId();return idbPut({id,name:f.name,blob:f}).then(()=>MUSIC.tracks.push({id,name:f.name,blob:f}))});
-  Promise.all(jobs).then(()=>{
+  MUSIC.lastError='';
+  const list=[...files];
+  const jobs=list.map(f=>{
+    const id=newId();
+    return idbPut({id,name:f.name,blob:f}).then(()=>{MUSIC.tracks.push({id,name:f.name,blob:f});return{ok:true}})
+      .catch(err=>({ok:false,name:f.name,err}));
+  });
+  Promise.all(jobs).then(results=>{
+    const failed=results.filter(r=>!r.ok);
+    if(failed.length){
+      MUSIC.lastError=failed.length===list.length
+        ?'Couldn\u2019t add '+(failed.length===1?'that song':'those songs')+'. '+(failed[0].err&&failed[0].err.message?failed[0].err.message:'This browser may be blocking storage (private browsing mode blocks it on iOS).')
+        :'Added '+(list.length-failed.length)+' of '+list.length+'. Failed: '+failed.map(f=>f.name).join(', ');
+    }else if(list.length){
+      MUSIC.lastError='';
+    }
     if(!MUSIC.selected&&MUSIC.tracks.length){MUSIC.selected=MUSIC.tracks[0].id;save('lb.music.selected',MUSIC.selected)}
     refreshControls();
   });
@@ -338,7 +352,11 @@ function playCurrentTrack(){
   if(MUSIC.url)URL.revokeObjectURL(MUSIC.url);
   MUSIC.url=URL.createObjectURL(t.blob);
   AUDIO.src=MUSIC.url;AUDIO.loop=(MUSIC.mode==='repeat-one');
-  AUDIO.play().then(()=>{MUSIC.playing=true;refreshControls()}).catch(()=>{MUSIC.playing=false;refreshControls()});
+  MUSIC.lastError='';
+  AUDIO.play().then(()=>{MUSIC.playing=true;refreshControls()}).catch(()=>{
+    MUSIC.playing=false;MUSIC.lastError='Couldn\u2019t play \u201c'+t.name+'\u201d \u2014 this device may not support that file.';
+    refreshControls();
+  });
 }
 function toggleMusic(){
   if(!MUSIC.tracks.length)return;
@@ -403,8 +421,9 @@ function musicHTML(){
     <button class="btn small danger" data-act="musicdel" data-v="${esc(t.id)}">Remove</button></div>`).join('')||'<div class="label">No songs added yet.</div>';
   return `<div class="group"><h3>Music</h3>
     <div class="label">Add songs from this device. They stay stored here only, in this browser.</div>
-    <div class="tools"><label class="btn small" style="display:inline-flex;align-items:center">Add songs<input type="file" id="musicfile" accept="audio/*" multiple style="display:none"></label>
+    <div class="tools"><label class="btn small" style="display:inline-flex;align-items:center">Add songs<input type="file" id="musicfile" multiple style="display:none"></label>
     <button class="btn small ${MUSIC.playing?'primary':''}" data-act="musictoggle" ${list.length?'':'disabled'}>${MUSIC.playing?'Pause':'Play'}</button></div>
+    ${MUSIC.lastError?'<div class="msg" style="color:var(--rose)">'+esc(MUSIC.lastError)+'</div>':''}
     ${modeSeg}${selectHtml}<div>${rows}</div></div>`;
 }
 function controlsHTML(){
