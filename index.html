@@ -93,6 +93,11 @@ b.p0,b.p1{font-weight:600}
 .cardfoot .btns{display:flex;gap:8px;flex-wrap:wrap}
 .never{display:flex;gap:8px;align-items:center;font-size:.88rem;color:var(--dim);margin-left:auto;padding:6px 4px}
 .never input{width:20px;height:20px;accent-color:var(--rose)}
+.timerbox{margin:0 0 18px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.timerbox .count{font-family:var(--serif);font-size:2.4rem;font-variant-numeric:tabular-nums;min-width:4.2ch;line-height:1}
+.timerbox .count.done{color:var(--rose)}
+.timerbox .tlabel{color:var(--dim);font-size:.9rem}
+.timerbox .btns{display:flex;gap:8px;flex-wrap:wrap}
 .choices{display:grid;gap:10px;margin-top:16px}
 .choices .btn{text-align:left;padding:14px 18px}
 .choices small{display:block;color:var(--dim)}
@@ -202,7 +207,7 @@ const SEED=[
 const FALLBACK={id:'_fallback',venue:'any',intensity:1,min_minutes:0,pw:[],pnw:[],rw:[],rnw:[],toys:[],rg:[],enabled:true,
   text:"Take a moment. {performer} tells {recipient} one thing they appreciated today."};
 
-const COLS=['id','venue','text','intensity','min_minutes','performer_wearing','performer_not_wearing','recipient_wearing','recipient_not_wearing','toys','recipient_gender','enabled'];
+const COLS=['id','venue','text','intensity','min_minutes','performer_wearing','performer_not_wearing','recipient_wearing','recipient_not_wearing','toys','recipient_gender','enabled','timer_seconds'];
 
 /* ============ storage ============ */
 const $=s=>document.querySelector(s);
@@ -220,6 +225,7 @@ function mk(o){
     intensity:Math.min(5,Math.max(1,parseInt(o.intensity)||1)),min_minutes:Math.max(0,parseInt(o.min_minutes)||0),
     pw:tags(o.pw),pnw:tags(o.pnw),rw:tags(o.rw),rnw:tags(o.rnw),toys:tags(o.toys),
     rg:tags(o.rg).filter(g=>GENDERS.includes(g)),
+    timer:Math.min(3600,Math.max(0,parseInt(o.timer)||0)),
     enabled:!['0','false','no','off'].includes(en)};
 }
 function seedActions(){return SEED.map(r=>mk({id:r[0],venue:r[1],intensity:r[2],min_minutes:r[3],pw:r[4],pnw:r[5],rw:r[6],rnw:r[7],toys:r[8],rg:r[9],text:r[10]}))}
@@ -234,7 +240,7 @@ function newState(){return {names:['Player 1','Player 2'],wearing:[['top','botto
   genders:['female','male'],passion:[2,2],toys:[],pace:'steady',pos:0,turn:0,elapsed:0,started:false,recent:[]}}
 let S=Object.assign(newState(),load('lb.state.v1',{}));
 const saveState=()=>save('lb.state.v1',S);
-const ui={screen:S.started?'game':'setup',phase:'idle',dice:null,card:null,panel:false,lib:{venue:'',q:'',show:'all'},libMsg:''};
+const ui={screen:S.started?'game':'setup',phase:'idle',dice:null,card:null,never:false,panel:false,lib:{venue:'',q:'',show:'all'},libMsg:''};
 
 const allClothing=()=>[...new Set([...DEFAULT_CLOTHING,...ACTIONS.flatMap(a=>[...a.pw,...a.pnw,...a.rw,...a.rnw])])];
 const allToys=()=>[...new Set([...DEFAULT_TOYS,...ACTIONS.flatMap(a=>a.toys)])];
@@ -277,11 +283,82 @@ const fmt=(text,perf)=>esc(text)
   .replace(/\{performer\}/g,`<b class="p${perf}">${esc(S.names[perf])}</b>`)
   .replace(/\{recipient\}/g,`<b class="p${1-perf}">${esc(S.names[1-perf])}</b>`);
 
+/* ============ shared audio context ============ */
+function getAudioCtx(){
+  const ctx=getAudioCtx._ctx||(getAudioCtx._ctx=new (window.AudioContext||window.webkitAudioContext)());
+  if(ctx.state==='suspended')ctx.resume();
+  return ctx;
+}
+
+/* ============ card timer ============ */
+const NUMW={a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,fifteen:15,twenty:20,thirty:30,forty:40,'forty-five':45,fifty:50,sixty:60,ninety:90};
+function detectDurations(text){
+  const out=new Set();let t=String(text||'').toLowerCase();
+  const num=w=>/^\d+(\.\d+)?$/.test(w)?parseFloat(w):NUMW[w];
+  t=t.replace(/\b(\d+|[a-z]+) minutes? and a half\b/g,(m,w)=>{const n=num(w);if(n)out.add(Math.round(n*60+30));return ' '});
+  t=t.replace(/\bhalf a minute\b/g,()=>{out.add(30);return ' '});
+  const re=/\b(\d+(?:\.\d+)?|[a-z]+(?:-[a-z]+)?)[\s-]+(seconds?|secs?|minutes?|mins?)\b/g;let m;
+  while((m=re.exec(t))){
+    const n=num(m[1]);if(!n)continue;
+    const s=Math.round(n*(m[2][0]==='m'?60:1));
+    if(s>=5&&s<=3600)out.add(s);
+  }
+  return [...out].sort((x,y)=>x-y).slice(0,3);
+}
+const timerOptions=a=>a&&a.timer>0?[a.timer]:detectDurations(a&&a.text);
+function fmtDur(s){const m=Math.floor(s/60),r=s%60;return m?(r?m+':'+String(r).padStart(2,'0'):m+(m===1?' minute':' minutes')):s+' seconds'}
+const fmtClock=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const TIMER={card:null,opts:[],total:0,left:0,end:0,state:'idle',iv:null};
+function timerStop(){if(TIMER.iv){clearInterval(TIMER.iv);TIMER.iv=null}}
+function timerReset(card){
+  timerStop();TIMER.card=card;TIMER.opts=card?timerOptions(card.a):[];TIMER.total=0;TIMER.left=0;TIMER.end=0;TIMER.state='idle';
+}
+function timerRemaining(){return Math.max(0,Math.ceil((TIMER.end-Date.now())/1000))}
+function timerBegin(){
+  TIMER.end=Date.now()+TIMER.left*1000;TIMER.state='running';timerStop();
+  TIMER.iv=setInterval(timerTick,250);
+}
+function timerTick(){
+  if(TIMER.state!=='running')return;
+  TIMER.left=timerRemaining();
+  const el=$('#tcount');if(el)el.textContent=fmtClock(TIMER.left);
+  if(TIMER.left<=0){timerStop();TIMER.state='done';playChime();try{navigator.vibrate&&navigator.vibrate([300,150,300])}catch(e){}renderLayer()}
+}
+function timerAct(act,v){
+  if(act==='tstart'){try{getAudioCtx()}catch(e){}TIMER.total=TIMER.left=+v;timerBegin()}
+  else if(act==='tpause'){TIMER.left=timerRemaining();TIMER.state='paused';timerStop()}
+  else if(act==='tresume'){try{getAudioCtx()}catch(e){}timerBegin()}
+  else if(act==='tadd'){
+    if(TIMER.state==='running'){TIMER.left=timerRemaining()+30;timerBegin()}
+    else{TIMER.left+=30;if(TIMER.state==='done'){TIMER.state='paused'}}
+  }
+  else if(act==='treset'){timerStop();TIMER.state='idle';TIMER.left=0}
+  renderLayer();
+}
+function timerHTML(){
+  if(!TIMER.opts.length)return '';
+  const st=TIMER.state;
+  if(st==='idle')return `<div class="timerbox"><span class="tlabel">Timer</span><div class="btns">${TIMER.opts.map(s=>`<button class="btn small" data-act="tstart" data-v="${s}">Start ${fmtDur(s)}</button>`).join('')}</div></div>`;
+  if(st==='done')return `<div class="timerbox" role="timer"><span class="count done" id="tcount">0:00</span><span class="tlabel">Time's up</span><div class="btns"><button class="btn small" data-act="tadd">+30 sec</button><button class="btn small" data-act="treset">Reset</button></div></div>`;
+  return `<div class="timerbox" role="timer"><span class="count" id="tcount">${fmtClock(st==='running'?timerRemaining():TIMER.left)}</span>
+    <div class="btns">${st==='running'?'<button class="btn small" data-act="tpause">Pause</button>':'<button class="btn small primary" data-act="tresume">Resume</button>'}<button class="btn small" data-act="tadd">+30 sec</button><button class="btn small" data-act="treset">Reset</button></div></div>`;
+}
+function playChime(){
+  try{
+    const ctx=getAudioCtx(),now=ctx.currentTime;
+    [0,0.45,0.9].forEach((d,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type='sine';o.frequency.value=i===2?1046:880;
+      g.gain.setValueAtTime(0.0001,now+d);g.gain.exponentialRampToValueAtTime(0.35,now+d+0.03);g.gain.exponentialRampToValueAtTime(0.0001,now+d+0.4);
+      o.connect(g);g.connect(ctx.destination);o.start(now+d);o.stop(now+d+0.45);
+    });
+  }catch(e){}
+}
+
 /* ============ dice sound ============ */
 function playDiceSound(){
   try{
-    const ctx=playDiceSound._ctx||(playDiceSound._ctx=new (window.AudioContext||window.webkitAudioContext)());
-    if(ctx.state==='suspended')ctx.resume();
+    const ctx=getAudioCtx();
     const now=ctx.currentTime,clicks=6+Math.floor(Math.random()*3);
     for(let i=0;i<clicks;i++){
       const t=now+i*0.045+Math.random()*0.02;
@@ -389,7 +466,7 @@ function parseCSV(t){
 const q=v=>{v=String(v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 function toCSV(list){
   const lines=[COLS.join(',')];
-  list.forEach(a=>lines.push([a.id,a.venue,a.text,a.intensity,a.min_minutes,a.pw.join('|'),a.pnw.join('|'),a.rw.join('|'),a.rnw.join('|'),a.toys.join('|'),a.rg.join('|'),a.enabled?1:0].map(q).join(',')));
+  list.forEach(a=>lines.push([a.id,a.venue,a.text,a.intensity,a.min_minutes,a.pw.join('|'),a.pnw.join('|'),a.rw.join('|'),a.rnw.join('|'),a.toys.join('|'),a.rg.join('|'),a.enabled?1:0,a.timer||''].map(q).join(',')));
   return lines.join('\n');
 }
 function importCSV(text,replace){
@@ -402,7 +479,7 @@ function importCSV(text,replace){
     const g=name=>ix(name)>=0?(r[ix(name)]||''):'';
     if(!g('text').trim()){warn.push('Row '+(n+2)+': no text, skipped.');return}
     const a=mk({id:g('id'),venue:g('venue')||'any',text:g('text'),intensity:g('intensity'),min_minutes:g('min_minutes'),
-      pw:g('performer_wearing'),pnw:g('performer_not_wearing'),rw:g('recipient_wearing'),rnw:g('recipient_not_wearing'),toys:g('toys'),rg:g('recipient_gender'),enabled:ix('enabled')>=0?g('enabled')||'1':'1'});
+      pw:g('performer_wearing'),pnw:g('performer_not_wearing'),rw:g('recipient_wearing'),rnw:g('recipient_not_wearing'),toys:g('toys'),rg:g('recipient_gender'),timer:g('timer_seconds'),enabled:ix('enabled')>=0?g('enabled')||'1':'1'});
     if(a.venue!=='any'&&!VENUES[a.venue])warn.push('Row '+(n+2)+': unknown venue "'+a.venue+'". Use one of: '+Object.keys(VENUES).join(', ')+', any.');
     incoming.push(a);
   });
@@ -484,6 +561,8 @@ const updateClock=()=>{const c=$('#clock');if(c)c.textContent=Math.floor(S.elaps
 
 function renderLayer(){
   let h='';
+  if(ui.phase==='card'&&ui.card){if(TIMER.card!==ui.card)timerReset(ui.card)}
+  else if(TIMER.card){timerReset(null)}
   if(ui.phase==='choose'){
     const v=VENUES[BOARD_TYPES[S.pos]];
     h=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-label="Choose roles">
@@ -499,11 +578,12 @@ function renderLayer(){
     h=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true" aria-label="Card">
       <div class="venue"><span>${v.name}</span><span class="dots" title="Intensity ${a.intensity} of 5">${[1,2,3,4,5].map(n=>`<i class="${n<=a.intensity?'on':''}"></i>`).join('')}</span></div>
       <div class="cardtext">${fmt(a.text,perf)}</div>
+      ${timerHTML()}
       <div class="cardfoot"><div class="btns">
         <button class="btn primary" data-act="done">Done</button>
         <button class="btn" data-act="skip">Skip</button>
         <button class="btn" data-act="reverse">Reverse roles</button></div>
-        ${a.id==='_fallback'?'':'<label class="never"><input type="checkbox" id="never"> Never show again</label>'}
+        ${a.id==='_fallback'?'':`<label class="never"><input type="checkbox" id="never" ${ui.never?'checked':''}> Never show again</label>`}
       </div></div></div>`;
   }
   if(ui.panel){
@@ -526,7 +606,8 @@ function renderLibrary(){
       <div class="field"><label for="f-int">Intensity (1 gentle to 5 fiery)</label><select id="f-int">${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join('')}</select></div></div>
       <div class="field"><label for="f-text">Card text. Use {performer} and {recipient}.</label><textarea id="f-text"></textarea></div>
       <div class="two"><div class="field"><label for="f-min">Earliest minute it can appear</label><input type="number" id="f-min" value="0" min="0"></div>
-      <div class="field"><label for="f-toys">Toys required (comma separated)</label><input type="text" id="f-toys" placeholder="massage_oil, ice"></div></div>
+      <div class="field"><label for="f-toys">Toys required (comma separated)</label><input type="text" id="f-toys" placeholder="massage_oil, ice"></div>
+      <div class="field"><label for="f-timer">Timer in seconds (blank = read it from the text)</label><input type="number" id="f-timer" min="0" placeholder="120"></div></div>
       <div class="two"><div class="field"><label for="f-pw">Performer must be wearing</label><input type="text" id="f-pw" placeholder="underwear"></div>
       <div class="field"><label for="f-pnw">Performer must NOT be wearing</label><input type="text" id="f-pnw"></div>
       <div class="field"><label for="f-rw">Recipient must be wearing</label><input type="text" id="f-rw" placeholder="underwear"></div>
@@ -558,7 +639,7 @@ function renderLibList(){
     &&(show==='all'||(show==='hidden'&&HIDDEN.has(a.id))||(show==='off'&&!a.enabled)));
   $('#liblist').innerHTML=`<div class="meta" style="color:var(--dim);margin:8px 0">${list.length} of ${ACTIONS.length} cards · ${HIDDEN.size} hidden</div>`+
   list.map(a=>{
-    const req=[a.pw.length?'performer wears '+a.pw.join('/'):'',a.pnw.length?'performer not '+a.pnw.join('/'):'',a.rw.length?'recipient wears '+a.rw.join('/'):'',a.rnw.length?'recipient not '+a.rnw.join('/'):'',a.toys.length?'needs '+a.toys.join('/'):'',a.rg.length===1?'recipient is '+a.rg[0]:'',a.min_minutes?'after '+a.min_minutes+' min':''].filter(Boolean).join(' · ');
+    const req=[a.pw.length?'performer wears '+a.pw.join('/'):'',a.pnw.length?'performer not '+a.pnw.join('/'):'',a.rw.length?'recipient wears '+a.rw.join('/'):'',a.rnw.length?'recipient not '+a.rnw.join('/'):'',a.toys.length?'needs '+a.toys.join('/'):'',a.rg.length===1?'recipient is '+a.rg[0]:'',a.min_minutes?'after '+a.min_minutes+' min':'',timerOptions(a).length?'timer '+timerOptions(a).map(fmtDur).join(' / ')+(a.timer?'':' (from text)'):''].filter(Boolean).join(' · ');
     return `<div class="row ${a.enabled&&!HIDDEN.has(a.id)?'':'off'}">
       <div class="txt"><div><span class="badge">${(VENUES[a.venue]||{name:a.venue}).name}</span><span class="badge">Intensity ${a.intensity}</span>${HIDDEN.has(a.id)?'<span class="badge hid">Hidden</span>':''}${a.enabled?'':'<span class="badge">Off</span>'}</div>
       <div>${esc(a.text)}</div><div class="meta">${esc(a.id)}${req?' · '+esc(req):''}</div></div>
@@ -579,7 +660,8 @@ function render(){
 /* ============ actions ============ */
 function endCard(hideIt){
   const c=ui.card;
-  if(c&&c.a.id!=='_fallback'&&$('#never')&&$('#never').checked){HIDDEN.add(c.a.id);saveHidden()}
+  if(c&&c.a.id!=='_fallback'&&ui.never){HIDDEN.add(c.a.id);saveHidden()}
+  ui.never=false;
 }
 function move(steps){
   ui.phase='moving';renderBoard();renderLayer();
@@ -622,8 +704,8 @@ document.addEventListener('click',e=>{
       const g=id=>$('#'+id).value;
       if(!g('f-text').trim()){$('#addmsg').textContent='Write the card text first.';break}
       const rg=[$('#f-gf').checked?'female':'',$('#f-gm').checked?'male':''].filter(Boolean).join('|');
-      ACTIONS.push(mk({venue:g('f-venue'),intensity:g('f-int'),text:g('f-text'),min_minutes:g('f-min'),toys:g('f-toys'),pw:g('f-pw'),pnw:g('f-pnw'),rw:g('f-rw'),rnw:g('f-rnw'),rg}));
-      saveActions();['f-text','f-toys','f-pw','f-pnw','f-rw','f-rnw'].forEach(id=>$('#'+id).value='');$('#f-min').value=0;$('#f-gf').checked=false;$('#f-gm').checked=false;
+      ACTIONS.push(mk({venue:g('f-venue'),intensity:g('f-int'),text:g('f-text'),min_minutes:g('f-min'),toys:g('f-toys'),timer:g('f-timer'),pw:g('f-pw'),pnw:g('f-pnw'),rw:g('f-rw'),rnw:g('f-rnw'),rg}));
+      saveActions();['f-text','f-toys','f-timer','f-pw','f-pnw','f-rw','f-rnw'].forEach(id=>$('#'+id).value='');$('#f-min').value=0;$('#f-gf').checked=false;$('#f-gm').checked=false;
       $('#addmsg').textContent='Card added.';renderLibList();break}
     case 'csvexport':$('#csvbox').value=toCSV(ACTIONS);$('#csvmsg').textContent='CSV of '+ACTIONS.length+' cards is in the box. Select all and copy, or use Download.';break;
     case 'csvdownload':{
@@ -640,6 +722,7 @@ document.addEventListener('click',e=>{
     case 'musicmode':MUSIC.mode=v;save('lb.music.mode',v);if(MUSIC.playing)playCurrentTrack();else refreshControls();break;
     case 'musictoggle':toggleMusic();break;
     case 'musicdel':removeTrack(v);break;
+    case 'tstart':case 'tpause':case 'tresume':case 'tadd':case 'treset':timerAct(act,v);break;
   }
 });
 document.addEventListener('input',e=>{
@@ -647,6 +730,7 @@ document.addEventListener('input',e=>{
   if(e.target.dataset.lib){ui.lib[e.target.dataset.lib]=e.target.value;renderLibList()}
 });
 document.addEventListener('change',e=>{
+  if(e.target.id==='never')ui.never=e.target.checked;
   if(e.target.id==='csvfile'&&e.target.files[0]){
     const fr=new FileReader();fr.onload=()=>{$('#csvbox').value=fr.result;$('#csvmsg').textContent='File loaded. Choose Import and merge, or Import and replace.'};fr.readAsText(e.target.files[0]);
   }
