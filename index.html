@@ -64,7 +64,7 @@ b.p0,b.p1{font-weight:600}
 .cell{border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   font-size:clamp(9px,1.9vw,13px);font-weight:600;color:#fff;text-align:center;position:relative;min-width:0}
 .cell.now{box-shadow:0 0 0 2px var(--gold) inset}
-.t-home{background:#a0405a}.t-massage{background:#83557c}.t-dance{background:#b4566d}.t-gym{background:#b9764a}
+.t-home{background:#a0405a}.t-massage{background:#83557c}.t-encounter{background:#4f7048}.t-gym{background:#b9764a}
 .t-clinic{background:#4f7f7b}.t-spa{background:#46739a}.t-lounge{background:#6f5296}.t-chance{background:#c9a94f;color:#2a1430}
 .toks{display:flex;gap:3px;min-height:12px}
 .tok{width:clamp(9px,2vw,14px);height:clamp(9px,2vw,14px);border-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
@@ -141,11 +141,12 @@ const GENDERS=['female','male'];
 const PASSION=['Tender','Warm','Heated','Intense','Fiery'];
 const PACE={slow:0.6,steady:1,quick:1.8};
 const VENUES={
-  home:{name:'Home',short:'Home'},massage:{name:'Massage Studio',short:'Massage'},dance:{name:'Dance Hall',short:'Dance'},
+  home:{name:'Home',short:'Home'},massage:{name:'Massage Studio',short:'Massage'},encounter:{name:'Random Encounter',short:'Encounter'},
   gym:{name:'Gym',short:'Gym'},clinic:{name:'Wellness Clinic',short:'Clinic'},spa:{name:'Spa Bath',short:'Spa'},
   lounge:{name:'Candlelit Lounge',short:'Lounge'},chance:{name:'Chance',short:'Chance'}
 };
-const BOARD_TYPES=['home','massage','dance','chance','gym','clinic','lounge','spa','massage','dance','chance','gym','clinic','lounge','spa','massage','dance','chance','gym','clinic','lounge','spa','chance','dance'];
+const VENUE_ALIAS={dance:'encounter'}; /* the old Dance Hall space is now Random Encounter */
+const BOARD_TYPES=['home','massage','encounter','chance','gym','clinic','lounge','spa','massage','encounter','chance','gym','clinic','lounge','spa','massage','encounter','chance','gym','clinic','lounge','spa','chance','encounter'];
 const RING=[];
 for(let c=0;c<7;c++)RING.push([0,c]);
 for(let r=1;r<7;r++)RING.push([r,6]);
@@ -163,11 +164,11 @@ const SEED=[
 ['m05','massage',2,5,'','','','','','',"{performer} massages {recipient}'s neck and scalp. {recipient} says when the pressure feels right."],
 ['m06','massage',3,15,'','','','top','','',"{performer} gives {recipient} a full back massage with long, slow strokes for five minutes."],
 ['m07','massage',2,6,'','','','','candle','',"{performer} drips warm massage-candle oil onto {recipient}'s shoulders and works it in."],
-['d01','dance',1,0,'','','','','','',"{performer} leads {recipient} in a slow dance to the current song."],
-['d02','dance',1,0,'','','','','','',"{recipient} picks the next song. {performer} asks for a dance."],
-['d03','dance',2,5,'','','','','','',"Dance close for one full song. No talking, just eye contact."],
-['d04','dance',2,8,'','','','','','',"{performer} whispers what they love most about {recipient} while you sway together."],
-['d05','dance',3,15,'','','','','','',"{performer} dances just for {recipient} for one song while {recipient} watches and doesn't touch."],
+['d01','encounter',1,0,'','','','','','',"{performer} leads {recipient} in a slow dance to the current song."],
+['d02','encounter',1,0,'','','','','','',"{recipient} picks the next song. {performer} asks for a dance."],
+['d03','encounter',2,5,'','','','','','',"Dance close for one full song. No talking, just eye contact."],
+['d04','encounter',2,8,'','','','','','',"{performer} whispers what they love most about {recipient} while you sway together."],
+['d05','encounter',3,15,'','','','','','',"{performer} dances just for {recipient} for one song while {recipient} watches and doesn't touch."],
 ['g01','gym',1,0,'','','','','','',"{performer} guides {recipient} through a slow arm and shoulder stretch."],
 ['g02','gym',1,0,'','','','','','',"Sit back to back and breathe together for one minute."],
 ['g03','gym',2,5,'','','','','','',"{performer} helps {recipient} stretch their legs, slowly and gently."],
@@ -211,9 +212,10 @@ const tags=v=>String(v||'').split(/[|,;]/).map(t=>t.trim().toLowerCase().replace
 const label=t=>t.replace(/_/g,' ');
 let uid=0;const newId=()=>'u'+Date.now().toString(36)+(uid++).toString(36);
 
+const normVenue=v=>{v=String(v||'any').trim().toLowerCase();return VENUE_ALIAS[v]||v};
 function mk(o){
   const en=String(o.enabled===undefined?'1':o.enabled).trim().toLowerCase();
-  return {id:String(o.id||newId()).trim(),venue:String(o.venue||'any').trim().toLowerCase(),text:String(o.text||'').trim(),
+  return {id:String(o.id||newId()).trim(),venue:normVenue(o.venue),text:String(o.text||'').trim(),
     intensity:Math.min(5,Math.max(1,parseInt(o.intensity)||1)),min_minutes:Math.max(0,parseInt(o.min_minutes)||0),
     pw:tags(o.pw),pnw:tags(o.pnw),rw:tags(o.rw),rnw:tags(o.rnw),toys:tags(o.toys),
     rg:tags(o.rg).filter(g=>GENDERS.includes(g)),
@@ -222,6 +224,7 @@ function mk(o){
 function seedActions(){return SEED.map(r=>mk({id:r[0],venue:r[1],intensity:r[2],min_minutes:r[3],pw:r[4],pnw:r[5],rw:r[6],rnw:r[7],toys:r[8],rg:r[9],text:r[10]}))}
 
 let ACTIONS=load('lb.actions.v1',null)||seedActions();
+if(ACTIONS.some(a=>VENUE_ALIAS[a.venue])){ACTIONS.forEach(a=>{a.venue=VENUE_ALIAS[a.venue]||a.venue});save('lb.actions.v1',ACTIONS)}
 let HIDDEN=new Set(load('lb.hidden.v1',[]));
 const saveActions=()=>save('lb.actions.v1',ACTIONS);
 const saveHidden=()=>save('lb.hidden.v1',[...HIDDEN]);
