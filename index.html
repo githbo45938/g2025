@@ -146,6 +146,7 @@ const VENUES={
   lounge:{name:'Candlelit Lounge',short:'Lounge'},chance:{name:'Chance',short:'Chance'}
 };
 const VENUE_ALIAS={dance:'encounter'}; /* the old Dance Hall space is now Random Encounter */
+const CATCHALL=['chance','encounter']; /* these squares draw from every venue except Home */
 const BOARD_TYPES=['home','massage','encounter','chance','gym','clinic','lounge','spa','massage','encounter','chance','gym','clinic','lounge','spa','massage','encounter','chance','gym','clinic','lounge','spa','chance','encounter'];
 const RING=[];
 for(let c=0;c<7;c++)RING.push([0,c]);
@@ -246,7 +247,7 @@ function pool(space,perf,relax){
   return ACTIONS.filter(a=>{
     if(!a.enabled||HIDDEN.has(a.id))return false;
     if(!relax){
-      if(space==='chance'){if(a.venue==='home')return false}
+      if(CATCHALL.includes(space)){if(a.venue==='home')return false}
       else if(a.venue!==space&&a.venue!=='any')return false;
     }
     if(a.intensity>c||a.min_minutes>eff)return false;
